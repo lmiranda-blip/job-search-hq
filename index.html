@@ -51,7 +51,6 @@ button:disabled{opacity:0.4;cursor:not-allowed;transform:none}
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect } = React;
-
 const TRACKS = ["Business Analytics","Supply Chain","Financial Analytics","General"];
 const STATUSES = ["Saved","Applied","Interview","Offer","Rejected"];
 const STATUS_COLORS = {
@@ -61,7 +60,6 @@ const STATUS_COLORS = {
   Offer:    {bg:"#EAF3DE",color:"#27500A"},
   Rejected: {bg:"#FCEBEB",color:"#791F1F"}
 };
-
 const LUIS_PROFILE = `
 CANDIDATE PROFILE — Luis Miranda Morales:
 - Degree: BS Business Analytics & Technology, Trinity University (May 2027), GPA 3.25
@@ -76,14 +74,12 @@ CANDIDATE PROFILE — Luis Miranda Morales:
 - GPA note: 3.25 — competitive for analytics roles, may be screened out by strict 3.5+ finance/banking firms
 - Languages: English and Spanish (fluent)
 `;
-
 function scoreColor(score) {
   if (score >= 8) return {fill:"#1D9E75",text:"#085041",bg:"#E1F5EE"};
   if (score >= 6) return {fill:"#639922",text:"#27500A",bg:"#EAF3DE"};
   if (score >= 4) return {fill:"#BA7517",text:"#633806",bg:"#FAEEDA"};
   return {fill:"#E24B4A",text:"#791F1F",bg:"#FCEBEB"};
 }
-
 function MatchScorecard({ match }) {
   if (!match) return null;
   const overall = Math.round((match.skill_match + match.interest + match.background + match.growth + match.location) / 5);
@@ -137,7 +133,6 @@ function MatchScorecard({ match }) {
     </div>
   );
 }
-
 function Badge({status}){
   const c=STATUS_COLORS[status]||STATUS_COLORS.Saved;
   return <span className="badge" style={{background:c.bg,color:c.color}}>{status}</span>;
@@ -145,7 +140,6 @@ function Badge({status}){
 function Toast({msg}){
   return <div className="toast"><i className="ti ti-check" style={{marginRight:6}}/>{ msg}</div>;
 }
-
 function SettingsScreen({apiKey,onSave}){
   const [val,setVal]=useState(apiKey||"");
   return (
@@ -176,7 +170,6 @@ function SettingsScreen({apiKey,onSave}){
     </div>
   );
 }
-
 function IntakeScreen({apiKey,onJobSaved}){
   const [mode,setMode]=useState("text");
   const [url,setUrl]=useState("");
@@ -185,7 +178,6 @@ function IntakeScreen({apiKey,onJobSaved}){
   const [loading,setLoading]=useState(false);
   const [result,setResult]=useState(null);
   const [error,setError]=useState("");
-
   async function analyze(){
     const cleanKey=(apiKey||"").trim();
     if(!cleanKey){setError("Add your API key in Settings first.");return;}
@@ -201,9 +193,7 @@ function IntakeScreen({apiKey,onJobSaved}){
           model:"claude-sonnet-4-5",
           max_tokens:1500,
           messages:[{role:"user",content:`Analyze this job posting for a specific candidate and return ONLY valid JSON, no markdown, no explanation.
-
 ${LUIS_PROFILE}
-
 Return this exact JSON schema:
 {
   "company": string,
@@ -229,7 +219,6 @@ Return this exact JSON schema:
     "gpa_flag": string or null (warn if role likely requires 3.5+ GPA, otherwise null)
   }
 }
-
 Job posting:
 ${input}`}]
         })
@@ -247,7 +236,6 @@ ${input}`}]
     }
     setLoading(false);
   }
-
   function saveJob(){
     if(!result)return;
     const jobs=JSON.parse(localStorage.getItem("jsc_jobs")||"[]");
@@ -256,7 +244,6 @@ ${input}`}]
     setResult(null);setText("");setUrl("");
     onJobSaved(result.role+" at "+result.company);
   }
-
   return (
     <div>
       <div style={{display:"flex",gap:8,marginBottom:"1.25rem"}}>
@@ -313,15 +300,12 @@ ${input}`}]
     </div>
   );
 }
-
 function TrackerScreen(){
   const [jobs,setJobs]=useState([]);
   const [filter,setFilter]=useState("All");
   const [trackFilter,setTrackFilter]=useState("All");
   const [expandedId,setExpandedId]=useState(null);
-
   useEffect(()=>{setJobs(JSON.parse(localStorage.getItem("jsc_jobs")||"[]"));},[]);
-
   function updateStatus(id,status){
     const updated=jobs.map(j=>j.id===id?{...j,status,appliedAt:status==="Applied"?new Date().toLocaleDateString():j.appliedAt}:j);
     setJobs(updated);localStorage.setItem("jsc_jobs",JSON.stringify(updated));
@@ -335,14 +319,12 @@ function TrackerScreen(){
     const updated=jobs.filter(j=>j.id!==id);
     setJobs(updated);localStorage.setItem("jsc_jobs",JSON.stringify(updated));
   }
-
   const filtered=jobs.filter(j=>{
     const s=filter==="All"||j.status===filter;
     const t=trackFilter==="All"||j.track===trackFilter;
     return s&&t;
   });
   const counts=STATUSES.reduce((acc,s)=>({...acc,[s]:jobs.filter(j=>j.status===s).length}),{});
-
   return (
     <div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:"1.5rem"}}>
@@ -424,21 +406,18 @@ function TrackerScreen(){
     </div>
   );
 }
-
 function App(){
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("jsc_key")||"");
   const [tab,setTab]=useState(()=>localStorage.getItem("jsc_key")?"intake":"settings");
   const [toast,setToast]=useState("");
-
   function saveKey(k){localStorage.setItem("jsc_key",k);setApiKey(k);showToast("API key saved");setTab("intake");}
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(""),2500);}
   function handleJobSaved(label){showToast("Saved: "+label);setTab("tracker");}
-
   return (
     <div>
       <div className="header">
-        <div>
-          <p style={{fontWeight:500,fontSize:20,letterSpacing:"-0.01em"}}>Job Search HQ</p>
+        <div style={{textAlign:"center",flex:1}}>
+          <p style={{fontWeight:700,fontSize:26,letterSpacing:"-0.02em",color:"#1a56db"}}>Job Search HQ</p>
           <p style={{fontSize:13,color:"var(--text2)",marginTop:2}}>Luis's recruiting command center</p>
         </div>
         <button onClick={()=>setTab("settings")} style={{border:"none",background:"none",color:"var(--text2)",padding:6}}>
@@ -459,7 +438,6 @@ function App(){
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
