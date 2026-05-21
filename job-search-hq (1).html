@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Job Search HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface2: #f4f3ef;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #a0a09c;
+    --accent: #1a1a18;
+    --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --green-bg: #E1F5EE; --green-text: #085041;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --red-bg: #FCEBEB; --red-text: #791F1F;
+    --gray-bg: #F1EFE8; --gray-text: #5F5E5A;
+    --teal-bg: #E1F5EE; --teal-text: #0F6E56;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  #root { max-width: 820px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+  input, select, textarea {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 9px 13px;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--text); }
+  textarea { resize: vertical; line-height: 1.6; }
+  button {
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    padding: 9px 18px;
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+  button:hover { background: var(--surface2); }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-primary {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+    font-weight: 500;
+  }
+  .btn-primary:hover { opacity: 0.85; background: var(--text); }
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+  .skill-tag {
+    background: var(--blue-bg);
+    color: var(--blue-text);
+    border-radius: 20px;
+    font-size: 12px;
+    padding: 3px 10px;
+    display: inline-block;
+    margin: 2px;
+  }
+  .metric {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+  }
+  .metric-val { font-size: 26px; font-weight: 500; display: block; }
+  .metric-lbl { font-size: 12px; color: var(--text2); display: block; margin-top: 2px; }
+  .nav {
+    display: flex;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  .nav-btn {
+    padding: 11px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    background: none;
+    color: var(--text2);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: none; color: var(--text); }
+  .nav-btn.active { color: var(--text); border-bottom-color: var(--text); }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.75rem 0 1.5rem;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 1.75rem;
+  }
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--text);
+    color: var(--surface);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 999;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TRACKS = ["Business Analytics", "Supply Chain", "Financial Analytics", "General"];
+const STATUSES = ["Saved", "Applied", "Interview", "Offer", "Rejected"];
+const STATUS_COLORS = {
+  Saved:    { bg: "#E6F1FB", color: "#0C447C" },
+  Applied:  { bg: "#FAEEDA", color: "#633806" },
+  Interview:{ bg: "#E1F5EE", color: "#085041" },
+  Offer:    { bg: "#EAF3DE", color: "#27500A" },
+  Rejected: { bg: "#FCEBEB", color: "#791F1F" }
+};
+
+function Badge({ status }) {
+  const c = STATUS_COLORS[status] || STATUS_COLORS.Saved;
+  return <span className="badge" style={{ background: c.bg, color: c.color }}>{status}</span>;
+}
+
+function Toast({ msg }) {
+  return <div className="toast"><i className="ti ti-check" style={{marginRight:6}}/>{msg}</div>;
+}
+
+function SettingsScreen({ apiKey, onSave }) {
+  const [val, setVal] = useState(apiKey || "");
+  return (
+    <div style={{ maxWidth: 520 }}>
+      <div className="card">
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: "1.25rem" }}>
+          <i className="ti ti-lock" style={{ fontSize: 22, color: "var(--text2)", marginTop: 2 }} />
+          <div>
+            <p style={{ fontWeight: 500, marginBottom: 4 }}>Anthropic API key</p>
+            <p style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.6 }}>
+              Stored only in your browser's localStorage. Never sent to any server except Anthropic's API directly.
+            </p>
+          </div>
+        </div>
+        <input
+          type="text"
+          placeholder="sk-ant-api03-..."
+          value={val}
+          onChange={e => setVal(e.target.value.trim())}
+          style={{ marginBottom: "0.5rem", fontFamily: "monospace", fontSize: 13, letterSpacing: "0.02em" }}
+        />
+        {val && !val.startsWith("sk-ant-") && (
+          <p style={{ fontSize: 12, color: "#A32D2D", background: "#FCEBEB", padding: "6px 10px", borderRadius: 6, marginBottom: "0.5rem" }}>
+            Key looks wrong — it should start with sk-ant-
+          </p>
+        )}
+        {val && val.startsWith("sk-ant-") && (
+          <p style={{ fontSize: 12, color: "#0F6E56", background: "#E1F5EE", padding: "6px 10px", borderRadius: 6, marginBottom: "0.5rem" }}>
+            Key format looks correct
+          </p>
+        )}
+        <button className="btn-primary" style={{ width: "100%", marginTop: "0.25rem" }} onClick={() => onSave(val.trim())}>
+          Save and continue
+        </button>
+        <p style={{ fontSize: 12, color: "var(--text3)", marginTop: "0.75rem", textAlign: "center" }}>
+          Get your key at <strong>console.anthropic.com</strong> → API Keys → Create Key
+        </p>
+      </div>
+
+      <div className="card" style={{ marginTop: "1rem" }}>
+        <p style={{ fontWeight: 500, marginBottom: "0.75rem" }}>Coming soon</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[
+            ["ti-file-text", "Resume tailor — match your resume to any job's keywords"],
+            ["ti-brand-linkedin", "LinkedIn outreach — find connections and draft messages"],
+            ["ti-file-download", "Export tracker — download your applications as CSV"]
+          ].map(([icon, text]) => (
+            <div key={text} style={{ display: "flex", gap: 10, alignItems: "center", color: "var(--text2)", fontSize: 14 }}>
+              <i className={`ti ${icon}`} style={{ fontSize: 16 }} />
+              <span>{text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IntakeScreen({ apiKey, onJobSaved }) {
+  const [mode, setMode] = useState("text");
+  const [url, setUrl] = useState("");
+  const [text, setText] = useState("");
+  const [track, setTrack] = useState("Business Analytics");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  async function analyze() {
+    const cleanKey = (apiKey || "").trim();
+    if (!cleanKey) { setError("Add your API key in Settings first."); return; }
+    if (!cleanKey.startsWith("sk-ant-")) { setError("API key looks wrong — it should start with sk-ant-  Check Settings and re-paste it."); return; }
+    const input = mode === "url" ? `Job posting URL: ${url}` : text;
+    if (!input.trim()) { setError("Paste a job description or URL first."); return; }
+    setError(""); setLoading(true); setResult(null);
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": cleanKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-5",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `Analyze this job posting and return ONLY valid JSON, no markdown fences, no explanation whatsoever. Use this exact schema:
+{
+  "company": string,
+  "role": string,
+  "location": string,
+  "type": "Full-time" or "Internship" or "Contract",
+  "salary": string or null,
+  "summary": string (2-3 sentence plain English overview),
+  "required_skills": array of strings (max 8),
+  "nice_to_haves": array of strings (max 5),
+  "fit_notes": string (1-2 sentences: what makes a strong candidate stand out)
+}
+
+Job posting:
+${input}`
+          }]
+        })
+      });
+      const data = await resp.json();
+      if (data.error) {
+        const msg = data.error.message || JSON.stringify(data.error);
+        if (msg.includes("auth") || msg.includes("API key") || data.error.type === "authentication_error") {
+          setError("Invalid API key. Go to Settings, clear the field, and re-paste your key from console.anthropic.com");
+        } else {
+          setError("Anthropic error: " + msg);
+        }
+        setLoading(false); return;
+      }
+      const raw = data.content[0].text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(raw);
+      setResult(parsed);
+    } catch (e) {
+      setError("Network error: " + e.message + " — check your internet connection and try again.");
+    }
+    setLoading(false);
+  }
+
+  function saveJob() {
+    if (!result) return;
+    const jobs = JSON.parse(localStorage.getItem("jsc_jobs") || "[]");
+    const job = {
+      id: Date.now(),
+      ...result,
+      track,
+      status: "Saved",
+      savedAt: new Date().toLocaleDateString(),
+      appliedAt: null,
+      notes: "",
+      url: mode === "url" ? url : ""
+    };
+    jobs.unshift(job);
+    localStorage.setItem("jsc_jobs", JSON.stringify(jobs));
+    setResult(null); setText(""); setUrl("");
+    onJobSaved(job.role + " at " + job.company);
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: "1.25rem" }}>
+        <button onClick={() => setMode("text")} style={mode === "text" ? { background: "var(--surface2)", fontWeight: 500 } : {}}>
+          <i className="ti ti-align-left" style={{ marginRight: 6 }} />Paste description
+        </button>
+        <button onClick={() => setMode("url")} style={mode === "url" ? { background: "var(--surface2)", fontWeight: 500 } : {}}>
+          <i className="ti ti-link" style={{ marginRight: 6 }} />Paste URL
+        </button>
+      </div>
+
+      {mode === "text"
+        ? <textarea rows={8} placeholder="Paste the full job description here..." value={text} onChange={e => setText(e.target.value)} style={{ marginBottom: "0.75rem" }} />
+        : <input placeholder="https://company.com/careers/role..." value={url} onChange={e => setUrl(e.target.value)} style={{ marginBottom: "0.75rem" }} />
+      }
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: "0.75rem" }}>
+        <label style={{ fontSize: 13, color: "var(--text2)", whiteSpace: "nowrap", fontWeight: 500 }}>Track:</label>
+        <select value={track} onChange={e => setTrack(e.target.value)}>
+          {TRACKS.map(t => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+
+      {error && <p style={{ fontSize: 13, color: "#A32D2D", marginBottom: "0.75rem", padding: "8px 12px", background: "#FCEBEB", borderRadius: "var(--radius)" }}>{error}</p>}
+
+      <button className="btn-primary" onClick={analyze} disabled={loading} style={{ width: "100%", marginBottom: "1.5rem", padding: "11px" }}>
+        {loading
+          ? <><i className="ti ti-loader" style={{ marginRight: 6 }} />Analyzing with Claude...</>
+          : <><i className="ti ti-sparkles" style={{ marginRight: 6 }} />Analyze job</>
+        }
+      </button>
+
+      {result && (
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+            <div>
+              <p style={{ fontWeight: 500, fontSize: 17, marginBottom: 3 }}>{result.role}</p>
+              <p style={{ fontSize: 14, color: "var(--text2)" }}>{result.company} · {result.location} · {result.type}</p>
+              {result.salary && <p style={{ fontSize: 13, color: "var(--text2)", marginTop: 2 }}>{result.salary}</p>}
+            </div>
+            <span className="badge" style={{ background: "#F1EFE8", color: "#5F5E5A", marginTop: 3 }}>{track}</span>
+          </div>
+
+          <p style={{ fontSize: 14, lineHeight: 1.75, color: "var(--text2)", marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "0.5px solid var(--border)" }}>
+            {result.summary}
+          </p>
+
+          <div style={{ marginBottom: "0.75rem" }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text2)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Required skills</p>
+            <div>{result.required_skills?.map(s => <span key={s} className="skill-tag">{s}</span>)}</div>
+          </div>
+
+          {result.nice_to_haves?.length > 0 && (
+            <div style={{ marginBottom: "0.75rem" }}>
+              <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text2)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Nice to have</p>
+              <div>{result.nice_to_haves.map(s => <span key={s} className="skill-tag" style={{ background: "#F1EFE8", color: "#5F5E5A" }}>{s}</span>)}</div>
+            </div>
+          )}
+
+          {result.fit_notes && (
+            <div style={{ background: "var(--surface2)", borderRadius: "var(--radius)", padding: "12px 14px", marginTop: "0.75rem", marginBottom: "1rem" }}>
+              <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text2)", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>What they're looking for</p>
+              <p style={{ fontSize: 13, lineHeight: 1.7 }}>{result.fit_notes}</p>
+            </div>
+          )}
+
+          <button className="btn-primary" onClick={saveJob} style={{ width: "100%", padding: "11px" }}>
+            <i className="ti ti-plus" style={{ marginRight: 6 }} />Save to tracker
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrackerScreen() {
+  const [jobs, setJobs] = useState([]);
+  const [filter, setFilter] = useState("All");
+  const [trackFilter, setTrackFilter] = useState("All");
+  const [expandedId, setExpandedId] = useState(null);
+
+  useEffect(() => {
+    setJobs(JSON.parse(localStorage.getItem("jsc_jobs") || "[]"));
+  }, []);
+
+  function updateStatus(id, status) {
+    const updated = jobs.map(j => j.id === id ? { ...j, status, appliedAt: status === "Applied" ? new Date().toLocaleDateString() : j.appliedAt } : j);
+    setJobs(updated);
+    localStorage.setItem("jsc_jobs", JSON.stringify(updated));
+  }
+
+  function updateNotes(id, notes) {
+    const updated = jobs.map(j => j.id === id ? { ...j, notes } : j);
+    setJobs(updated);
+    localStorage.setItem("jsc_jobs", JSON.stringify(updated));
+  }
+
+  function deleteJob(id) {
+    if (!confirm("Remove this job from your tracker?")) return;
+    const updated = jobs.filter(j => j.id !== id);
+    setJobs(updated);
+    localStorage.setItem("jsc_jobs", JSON.stringify(updated));
+  }
+
+  const filtered = jobs.filter(j => {
+    const s = filter === "All" || j.status === filter;
+    const t = trackFilter === "All" || j.track === trackFilter;
+    return s && t;
+  });
+
+  const counts = STATUSES.reduce((acc, s) => ({ ...acc, [s]: jobs.filter(j => j.status === s).length }), {});
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: "1.5rem" }}>
+        {[["Total saved", jobs.length], ["Applied", counts.Applied], ["Interviewing", counts.Interview], ["Offers", counts.Offer]].map(([l, v]) => (
+          <div key={l} className="metric">
+            <span className="metric-val">{v}</span>
+            <span className="metric-lbl">{l}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: "1.25rem", flexWrap: "wrap" }}>
+        <select value={filter} onChange={e => setFilter(e.target.value)} style={{ width: "auto" }}>
+          <option value="All">All statuses</option>
+          {STATUSES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select value={trackFilter} onChange={e => setTrackFilter(e.target.value)} style={{ width: "auto" }}>
+          <option value="All">All tracks</option>
+          {TRACKS.map(t => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+
+      {filtered.length === 0
+        ? (
+          <div style={{ textAlign: "center", padding: "4rem 0", color: "var(--text3)" }}>
+            <i className="ti ti-briefcase" style={{ fontSize: 36, display: "block", marginBottom: 12 }} />
+            <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>No jobs here yet</p>
+            <p style={{ fontSize: 13 }}>Add your first job in the Add Job tab</p>
+          </div>
+        )
+        : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {filtered.map(job => (
+              <div key={job.id} className="card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <p style={{ fontWeight: 500, fontSize: 15 }}>{job.role}</p>
+                      <Badge status={job.status} />
+                      <span className="badge" style={{ background: "#F1EFE8", color: "#5F5E5A" }}>{job.track}</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: "var(--text2)" }}>{job.company} · {job.location}</p>
+                    <p style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>Saved {job.savedAt}{job.appliedAt ? ` · Applied ${job.appliedAt}` : ""}</p>
+                  </div>
+                  <div style={{ display: "flex", gap: 4, marginLeft: 8 }}>
+                    <button onClick={() => setExpandedId(expandedId === job.id ? null : job.id)} style={{ border: "none", background: "none", color: "var(--text2)", padding: 4 }} aria-label="Expand">
+                      <i className={`ti ${expandedId === job.id ? "ti-chevron-up" : "ti-chevron-down"}`} style={{ fontSize: 16 }} />
+                    </button>
+                    <button onClick={() => deleteJob(job.id)} style={{ border: "none", background: "none", color: "var(--text3)", padding: 4 }} aria-label="Delete">
+                      <i className="ti ti-trash" style={{ fontSize: 16 }} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "0.75rem", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {STATUSES.map(s => (
+                    <button key={s} onClick={() => updateStatus(job.id, s)}
+                      style={{ fontSize: 12, padding: "4px 12px", background: job.status === s ? STATUS_COLORS[s].bg : "transparent", color: job.status === s ? STATUS_COLORS[s].color : "var(--text2)", borderColor: job.status === s ? "transparent" : "var(--border)", fontWeight: job.status === s ? 500 : 400 }}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+
+                {expandedId === job.id && (
+                  <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "0.5px solid var(--border)" }}>
+                    {job.required_skills?.length > 0 && (
+                      <div style={{ marginBottom: "0.75rem" }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text2)", marginBottom: 5 }}>Required skills</p>
+                        <div>{job.required_skills.map(s => <span key={s} className="skill-tag">{s}</span>)}</div>
+                      </div>
+                    )}
+                    <div>
+                      <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text2)", marginBottom: 5 }}>Notes</p>
+                      <textarea rows={3} placeholder="Add notes, interview dates, contacts..." value={job.notes || ""} onChange={e => updateNotes(job.id, e.target.value)} />
+                    </div>
+                    {job.url && (
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--blue-text)", marginTop: "0.5rem", textDecoration: "none" }}>
+                        <i className="ti ti-external-link" style={{ fontSize: 14 }} />View original posting
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  );
+}
+
+function App() {
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("jsc_key") || "");
+  const [tab, setTab] = useState(() => localStorage.getItem("jsc_key") ? "intake" : "settings");
+  const [toast, setToast] = useState("");
+
+  function saveKey(k) {
+    localStorage.setItem("jsc_key", k);
+    setApiKey(k);
+    showToast("API key saved");
+    setTab("intake");
+  }
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
+  }
+
+  function handleJobSaved(label) {
+    showToast(`Saved: ${label}`);
+    setTab("tracker");
+  }
+
+  return (
+    <div>
+      <div className="header">
+        <div>
+          <p style={{ fontWeight: 500, fontSize: 20, letterSpacing: "-0.01em" }}>Job Search HQ</p>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginTop: 2 }}>Your personal recruiting command center</p>
+        </div>
+        <button onClick={() => setTab("settings")} style={{ border: "none", background: "none", color: "var(--text2)", padding: 6 }} aria-label="Settings">
+          <i className="ti ti-settings" style={{ fontSize: 20 }} />
+        </button>
+      </div>
+
+      <nav className="nav">
+        {[["intake", "ti-plus", "Add job"], ["tracker", "ti-chart-bar", "Tracker"], ["settings", "ti-settings", "Settings"]].map(([t, icon, label]) => (
+          <button key={t} className={`nav-btn${tab === t ? " active" : ""}`} onClick={() => setTab(t)}>
+            <i className={`ti ${icon}`} style={{ marginRight: 6 }} />{label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "settings" && <SettingsScreen apiKey={apiKey} onSave={saveKey} />}
+      {tab === "intake"   && <IntakeScreen apiKey={apiKey} onJobSaved={handleJobSaved} />}
+      {tab === "tracker"  && <TrackerScreen />}
+
+      {toast && <Toast msg={toast} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
