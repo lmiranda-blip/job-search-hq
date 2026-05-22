@@ -672,13 +672,10 @@ RULES: One page max. Max 3 bullets per role. Weave in missing keywords only wher
     if(!s)return;
     let t=`${s.name}\n${s.contact}\n\n`;
     (s.sections||[]).forEach(sec=>{
-      t+=`${sec.title.toUpperCase()}\n`;
-      if(sec.type==="text"){t+=sec.content+"\n\n";}
-      else{(sec.entries||[]).forEach(e=>{
-        t+=`${e.title||e.institution||""} | ${e.organization||e.company||e.degree||""} | ${e.dates||""}\n`;
-        (e.bullets||e.details||[]).forEach(b=>{t+=`• ${b}\n`;});
-        t+="\n";
-      });}
+      t+=`${sec.title}\n${"─".repeat(40)}\n`;
+      if(sec.type==="skills"){(sec.entries||[]).forEach(e=>{t+=`${e.label}: ${e.content}\n`;});t+="\n";}
+      else if(sec.type==="education"){(sec.entries||[]).forEach(e=>{t+=`${e.institution}\t${e.dates}\n${e.degree}${e.gpa?" | GPA: "+e.gpa:""}\n`;(e.details||[]).forEach(d=>{t+=`${d}\n`;});t+="\n";});}
+      else{(sec.entries||[]).forEach(e=>{t+=`${e.organization}\t${e.dates}\n${e.title?e.title+"\n":""}`;(e.bullets||[]).forEach(b=>{t+=`• ${b}\n`;});t+="\n";});}
     });
     navigator.clipboard.writeText(t.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
   }
