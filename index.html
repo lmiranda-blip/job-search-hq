@@ -474,10 +474,11 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
   const [jobs]=useState(()=>JSON.parse(localStorage.getItem("jsc_jobs")||"[]"));
   const [selectedJobId,setSelectedJobId]=useState(tailorJob?.id||null);
   const [loading,setLoading]=useState(false);
+  const [generating,setGenerating]=useState(false);
   const [result,setResult]=useState(null);
   const [error,setError]=useState("");
   const [copied,setCopied]=useState(false);
-  const [pdfLoading,setPdfLoading]=useState(false);
+  const [docxLoading,setDocxLoading]=useState(false);
   const [showAddExp,setShowAddExp]=useState(false);
   const [expCompany,setExpCompany]=useState("");
   const [expRole,setExpRole]=useState("");
