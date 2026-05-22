@@ -631,7 +631,7 @@ ${(s.sections||[]).map(renderSec).join("")}
       const resp=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
         headers:{"Content-Type":"application/json","x-api-key":cleanKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:4000,messages:[{role:"user",content:`You are a resume coach helping a college senior tailor their resume. Return ONLY valid JSON, no markdown.
+        body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:4000,messages:[{role:"user",content:`You are a resume coach helping a college senior tailor their resume for a specific job. Return ONLY valid JSON, no markdown.
 
 CANDIDATE RESUME:
 ${baseResume}
@@ -639,22 +639,25 @@ ${baseResume}
 TARGET JOB:
 ${jobCtx}
 
-Return this exact JSON:
+Return this exact JSON (preserve the EXACT section order and structure of the original resume):
 {
-  "missing_keywords": string[] (max 10 keywords absent from resume),
-  "present_keywords": string[] (max 8 keywords already present),
+  "missing_keywords": string[] (max 10 keywords absent from the resume),
+  "present_keywords": string[] (max 8 important keywords already present),
   "bullet_rewrites": [{"original":string,"rewritten":string,"reason":string}] (3-5 rewrites in XYZ format: Accomplished X as measured by Y by doing Z),
-  "top_tip": string,
+  "top_tip": string (one high-impact piece of advice for this specific application),
   "tailored_structured": {
-    "name": string,
-    "contact": string (pipe-separated: email | phone | LinkedIn | location),
-    "sections": array preserving EXACT same order and sections as the original resume. Each object is one of:
-      {"title":string,"type":"experience","entries":[{"title":string,"organization":string,"dates":string,"location":string,"bullets":string[]}]}
-      {"title":string,"type":"education","entries":[{"institution":string,"degree":string,"dates":string,"gpa":string,"details":string[]}]}
-      {"title":string,"type":"text","content":string}
-    IMPORTANT: Keep to one page. Max 3 bullets per role. Weave in missing keywords only where truthful.
+    "name": "Luis Miranda Morales",
+    "contact": string (format: phone • email • linkedin URL),
+    "sections": [
+      {"title":"EDUCATION","type":"education","entries":[{"institution":"Trinity University – San Antonio","dates":"May 2027","degree":"Bachelor of Science in Business Analytics and Technology","gpa":"3.25","details":["Triple Minor: Data Science, Finance, Supply Chain Management","Notable Coursework: ...","Study Abroad: Prague, Czech Republic (Fall 2025)"]}]},
+      {"title":"WORK EXPERIENCE","type":"experience","entries":[{"organization":"Company – City, ST","dates":"Month Year - Month Year","title":"Job Title","bullets":["bullet 1","bullet 2","bullet 3"]}]},
+      {"title":"PROJECTS","type":"experience","entries":[{"organization":"Project Name – Context","dates":"Month Year","title":"","bullets":["bullet"]}]},
+      {"title":"ACADEMIC EXPERIENCE AND ACTIVITIES","type":"experience","entries":[{"organization":"Org Name – Role","dates":"Date Range","title":"","bullets":["bullet 1","bullet 2"]}]},
+      {"title":"TECHNICAL SKILLS","type":"skills","entries":[{"label":"Programming & Data Tools","content":"..."},{"label":"Certifications","content":"..."},{"label":"Activities","content":"..."},{"label":"Languages","content":"Fluent in English and Spanish"}]}
+    ]
   }
-}`}]})
+}
+RULES: One page max. Max 3 bullets per role. Weave in missing keywords only where truthful. Keep all existing sections and order.`}]})
       });
       const data=await resp.json();
       if(data.error){setError("Anthropic error: "+(data.error.message||JSON.stringify(data.error)));setLoading(false);return;}
