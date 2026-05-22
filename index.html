@@ -353,7 +353,7 @@ ${input}`}]
     </div>
   );
 }
-function TrackerScreen(){
+function TrackerScreen({onTailor}){
   const [jobs,setJobs]=useState([]);
   const [filter,setFilter]=useState("All");
   const [trackFilter,setTrackFilter]=useState("All");
