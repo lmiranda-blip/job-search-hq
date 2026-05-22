@@ -653,9 +653,11 @@ function App(){
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("jsc_key")||"");
   const [tab,setTab]=useState(()=>localStorage.getItem("jsc_key")?"intake":"settings");
   const [toast,setToast]=useState("");
+  const [tailorJob,setTailorJob]=useState(null);
   function saveKey(k){localStorage.setItem("jsc_key",k);setApiKey(k);showToast("API key saved");setTab("intake");}
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(""),2500);}
   function handleJobSaved(label){showToast("Saved: "+label);setTab("tracker");}
+  function handleTailor(job){setTailorJob(job);setTab("resume");}
   return (
     <div>
       <div className="header">
@@ -668,7 +670,7 @@ function App(){
         </button>
       </div>
       <nav className="nav">
-        {[["intake","ti-plus","Add job"],["tracker","ti-chart-bar","Tracker"],["settings","ti-settings","Settings"]].map(([t,icon,label])=>(
+        {[["intake","ti-plus","Add job"],["tracker","ti-chart-bar","Tracker"],["resume","ti-file-text","Resume"],["settings","ti-settings","Settings"]].map(([t,icon,label])=>(
           <button key={t} className={`nav-btn${tab===t?" active":""}`} onClick={()=>setTab(t)}>
             <i className={`ti ${icon}`} style={{marginRight:6}}/>{label}
           </button>
@@ -676,7 +678,8 @@ function App(){
       </nav>
       {tab==="settings"&&<SettingsScreen apiKey={apiKey} onSave={saveKey}/>}
       {tab==="intake"&&<IntakeScreen apiKey={apiKey} onJobSaved={handleJobSaved}/>}
-      {tab==="tracker"&&<TrackerScreen/>}
+      {tab==="tracker"&&<TrackerScreen onTailor={handleTailor}/>}
+      {tab==="resume"&&<ResumeScreen apiKey={apiKey} tailorJob={tailorJob} onClearTailorJob={()=>setTailorJob(null)}/>}
       {toast&&<Toast msg={toast}/>}
     </div>
   );
