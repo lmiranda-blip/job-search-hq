@@ -459,6 +459,196 @@ function TrackerScreen(){
     </div>
   );
 }
+function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
+  const [baseResume,setBaseResume]=useState(()=>localStorage.getItem("jsc_resume")||"");
+  const [editing,setEditing]=useState(!localStorage.getItem("jsc_resume"));
+  const [draft,setDraft]=useState(()=>localStorage.getItem("jsc_resume")||"");
+  const [jobs]=useState(()=>JSON.parse(localStorage.getItem("jsc_jobs")||"[]"));
+  const [selectedJobId,setSelectedJobId]=useState(tailorJob?.id||null);
+  const [loading,setLoading]=useState(false);
+  const [result,setResult]=useState(null);
+  const [error,setError]=useState("");
+  const [copied,setCopied]=useState(false);
+  const [showAddExp,setShowAddExp]=useState(false);
+  const [expCompany,setExpCompany]=useState("");
+  const [expRole,setExpRole]=useState("");
+  const [expDates,setExpDates]=useState("");
+  const [expBullets,setExpBullets]=useState("");
+
+  useEffect(()=>{if(tailorJob){setSelectedJobId(tailorJob.id);}},[tailorJob]);
+
+  function saveResume(){localStorage.setItem("jsc_resume",draft);setBaseResume(draft);setEditing(false);}
+
+  function addExperience(){
+    if(!expCompany.trim()&&!expRole.trim())return;
+    const block=`\n${expRole.trim()}${expCompany.trim()?" | "+expCompany.trim():""}\n${expDates.trim()}\n${expBullets.split("\n").map(b=>b.trim()?"• "+b.trim():"").filter(Boolean).join("\n")}`;
+    const updated=(baseResume+block).trim();
+    setDraft(updated);setBaseResume(updated);localStorage.setItem("jsc_resume",updated);
+    setExpCompany("");setExpRole("");setExpDates("");setExpBullets("");setShowAddExp(false);
+  }
+
+  async function tailor(){
+    const cleanKey=(apiKey||"").trim();
+    if(!cleanKey){setError("Add your API key in Settings first.");return;}
+    if(!cleanKey.startsWith("sk-ant-")){setError("API key looks wrong — check Settings.");return;}
+    if(!baseResume.trim()){setError("Save your resume above first.");return;}
+    const job=jobs.find(j=>j.id===selectedJobId);
+    if(!job){setError("Select a job to tailor to.");return;}
+    setLoading(true);setError("");setResult(null);
+    const jobCtx=`Role: ${job.role}\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\n${job.summary?"Summary: "+job.summary+"\n":""}Required skills: ${job.required_skills?.join(", ")||"N/A"}\nNice to have: ${job.nice_to_haves?.join(", ")||"N/A"}\n${job.fit_notes?"What they're looking for: "+job.fit_notes:""}`;
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":cleanKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:3000,messages:[{role:"user",content:`You are a resume coach helping a college senior tailor their resume for a specific job. Return ONLY valid JSON, no markdown, no explanation.
+
+CANDIDATE RESUME:
+${baseResume}
+
+TARGET JOB:
+${jobCtx}
+
+Return this exact JSON schema:
+{
+  "missing_keywords": string[] (keywords/skills in the job that are absent from the resume, max 10),
+  "present_keywords": string[] (important keywords from the job already in the resume, max 8),
+  "bullet_rewrites": [{"original": string, "rewritten": string (XYZ format: Accomplished [X] as measured by [Y], by doing [Z]), "reason": string}] (3-5 most impactful rewrites),
+  "tailored_resume": string (full resume text with rewrites applied and missing keywords woven in where truthful),
+  "top_tip": string (one high-impact piece of advice specific to this application)
+}`}]})
+      });
+      const data=await resp.json();
+      if(data.error){setError("Anthropic error: "+(data.error.message||JSON.stringify(data.error)));setLoading(false);return;}
+      const raw=data.content[0].text.replace(/```json|```/g,"").trim();
+      setResult(JSON.parse(raw));
+    }catch(e){setError("Error: "+e.message);}
+    setLoading(false);
+  }
+
+  function copyResume(){
+    if(!result?.tailored_resume)return;
+    navigator.clipboard.writeText(result.tailored_resume).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
+  }
+
+  const selectedJob=jobs.find(j=>j.id===selectedJobId);
+
+  return (
+    <div>
+      <div className="card" style={{marginBottom:"1rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>
+          <p style={{fontWeight:500,fontSize:15}}>Your base resume</p>
+          {!editing&&baseResume&&(
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>setShowAddExp(v=>!v)} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}>
+                <i className="ti ti-plus" style={{marginRight:4}}/>Add experience
+              </button>
+              <button onClick={()=>{setDraft(baseResume);setEditing(true);}} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}>
+                <i className="ti ti-pencil" style={{marginRight:4}}/>Edit
+              </button>
+            </div>
+          )}
+        </div>
+        {editing||!baseResume?(
+          <>
+            <textarea rows={14} placeholder={"Paste your full resume here as plain text.\n\nInclude all sections: skills, experience, education, projects."} value={draft} onChange={e=>setDraft(e.target.value)} style={{marginBottom:"0.75rem",fontFamily:"monospace",fontSize:12,lineHeight:1.6}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn-primary" onClick={saveResume} style={{flex:1,padding:"9px"}}><i className="ti ti-device-floppy" style={{marginRight:6}}/>Save resume</button>
+              {baseResume&&<button onClick={()=>setEditing(false)} style={{padding:"9px 16px"}}>Cancel</button>}
+            </div>
+          </>
+        ):(
+          <div style={{background:"var(--surface2)",borderRadius:"var(--radius)",padding:"12px 14px",maxHeight:180,overflowY:"auto"}}>
+            <pre style={{fontSize:12,lineHeight:1.65,whiteSpace:"pre-wrap",color:"var(--text)",margin:0,fontFamily:"monospace"}}>{baseResume}</pre>
+          </div>
+        )}
+      </div>
+
+      {showAddExp&&(
+        <div className="card" style={{marginBottom:"1rem",border:"1.5px dashed var(--border2)"}}>
+          <p style={{fontWeight:500,fontSize:14,marginBottom:"0.75rem"}}>Add new experience</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem",marginBottom:"0.75rem"}}>
+            <div><label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Role / Title</label><input placeholder="Data Analyst Intern" value={expRole} onChange={e=>setExpRole(e.target.value)}/></div>
+            <div><label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Company</label><input placeholder="Acme Corp" value={expCompany} onChange={e=>setExpCompany(e.target.value)}/></div>
+          </div>
+          <div style={{marginBottom:"0.75rem"}}><label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Dates</label><input placeholder="May 2025 – Aug 2025" value={expDates} onChange={e=>setExpDates(e.target.value)}/></div>
+          <div style={{marginBottom:"0.75rem"}}><label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Bullet points (one per line)</label><textarea rows={4} placeholder={"Built dashboard tracking KPIs for 3 product lines\nReduced report time by 40%"} value={expBullets} onChange={e=>setExpBullets(e.target.value)}/></div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn-primary" onClick={addExperience} style={{flex:1,padding:"9px"}}>Add to resume</button>
+            <button onClick={()=>setShowAddExp(false)} style={{padding:"9px 16px"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {baseResume&&(
+        <div className="card" style={{marginBottom:"1rem"}}>
+          <p style={{fontWeight:500,fontSize:15,marginBottom:"0.75rem"}}>Tailor to a job</p>
+          {tailorJob?(
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"0.75rem",background:"var(--surface2)",borderRadius:"var(--radius)",padding:"10px 14px"}}>
+              <i className="ti ti-briefcase" style={{color:"var(--accent)",fontSize:16}}/>
+              <div style={{flex:1}}><p style={{fontWeight:500,fontSize:13}}>{tailorJob.role}</p><p style={{fontSize:12,color:"var(--text2)"}}>{tailorJob.company}</p></div>
+              <button onClick={onClearTailorJob} style={{fontSize:12,color:"var(--text2)",padding:"4px 8px"}}>Change</button>
+            </div>
+          ):(
+            <select value={selectedJobId||""} onChange={e=>setSelectedJobId(Number(e.target.value))} style={{width:"100%",marginBottom:"0.75rem"}}>
+              <option value="">Select a saved job...</option>
+              {jobs.map(j=><option key={j.id} value={j.id}>{j.role} — {j.company}</option>)}
+            </select>
+          )}
+          {error&&<p style={{fontSize:13,color:"#A32D2D",marginBottom:"0.75rem",padding:"8px 12px",background:"#FCEBEB",borderRadius:"var(--radius)"}}>{error}</p>}
+          <button className="btn-primary" onClick={tailor} disabled={loading||!selectedJobId} style={{width:"100%",padding:"11px"}}>
+            {loading?<><i className="ti ti-loader" style={{marginRight:6}}/>Tailoring your resume...</>:<><i className="ti ti-wand" style={{marginRight:6}}/>Tailor resume</>}
+          </button>
+        </div>
+      )}
+
+      {result&&(
+        <div>
+          {result.top_tip&&(
+            <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"var(--radius)",padding:"12px 14px",marginBottom:"1rem",display:"flex",gap:10,alignItems:"flex-start"}}>
+              <i className="ti ti-bulb" style={{color:"var(--accent)",fontSize:16,marginTop:2}}/>
+              <p style={{fontSize:13,lineHeight:1.6,color:"var(--text)"}}>{result.top_tip}</p>
+            </div>
+          )}
+          <div className="card" style={{marginBottom:"1rem"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem"}}>
+              <div>
+                <p style={{fontSize:12,fontWeight:500,color:"#A32D2D",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Missing keywords</p>
+                <div>{result.missing_keywords?.map(k=><span key={k} style={{display:"inline-block",fontSize:12,padding:"3px 9px",borderRadius:20,background:"#FEECED",color:"#A32D2D",margin:"2px"}}>{k}</span>)}</div>
+              </div>
+              <div>
+                <p style={{fontSize:12,fontWeight:500,color:"#166534",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Already present</p>
+                <div>{result.present_keywords?.map(k=><span key={k} style={{display:"inline-block",fontSize:12,padding:"3px 9px",borderRadius:20,background:"#DCFCE7",color:"#166534",margin:"2px"}}>{k}</span>)}</div>
+              </div>
+            </div>
+          </div>
+          {result.bullet_rewrites?.length>0&&(
+            <div className="card" style={{marginBottom:"1rem"}}>
+              <p style={{fontWeight:500,fontSize:14,marginBottom:"1rem"}}>Bullet rewrites <span style={{fontSize:12,color:"var(--text2)",fontWeight:400}}>XYZ format</span></p>
+              <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+                {result.bullet_rewrites.map((b,i)=>(
+                  <div key={i} style={{paddingBottom:"1rem",borderBottom:i<result.bullet_rewrites.length-1?"1px solid var(--border)":"none"}}>
+                    <p style={{fontSize:12,color:"var(--text3)",marginBottom:5,textDecoration:"line-through"}}>{b.original}</p>
+                    <p style={{fontSize:13,color:"var(--text)",fontWeight:500,marginBottom:4}}>→ {b.rewritten}</p>
+                    <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{b.reason}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="card">
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>
+              <p style={{fontWeight:500,fontSize:14}}>Tailored resume</p>
+              <button onClick={copyResume} style={{fontSize:12,padding:"5px 12px",color:copied?"#166534":"var(--text2)",background:copied?"#DCFCE7":"transparent",border:"1px solid",borderColor:copied?"#166534":"var(--border)"}}>
+                <i className={`ti ${copied?"ti-check":"ti-copy"}`} style={{marginRight:5}}/>{copied?"Copied!":"Copy text"}
+              </button>
+            </div>
+            <pre style={{fontSize:12,lineHeight:1.65,whiteSpace:"pre-wrap",color:"var(--text)",background:"var(--surface2)",borderRadius:"var(--radius)",padding:"12px 14px",maxHeight:420,overflowY:"auto",fontFamily:"monospace"}}>{result.tailored_resume}</pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 function App(){
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("jsc_key")||"");
   const [tab,setTab]=useState(()=>localStorage.getItem("jsc_key")?"intake":"settings");
