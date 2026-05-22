@@ -448,7 +448,12 @@ function TrackerScreen({onTailor}){
                       <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:5}}>Notes</p>
                       <textarea rows={3} placeholder="Interview dates, contacts, follow-up notes..." value={job.notes||""} onChange={e=>updateNotes(job.id,e.target.value)}/>
                     </div>
-                    {job.url&&<a href={job.url} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"#0C447C",marginTop:"0.5rem",textDecoration:"none"}}><i className="ti ti-external-link" style={{fontSize:14}}/>View original posting</a>}
+                    <div style={{display:"flex",gap:8,marginTop:"0.75rem",flexWrap:"wrap",alignItems:"center"}}>
+                      <button onClick={()=>onTailor&&onTailor(job)} style={{fontSize:12,padding:"5px 12px",color:"var(--accent)",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:5}}>
+                        <i className="ti ti-wand" style={{fontSize:13}}/>Tailor resume
+                      </button>
+                      {job.url&&<a href={job.url} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,color:"#0C447C",textDecoration:"none"}}><i className="ti ti-external-link" style={{fontSize:14}}/>View posting</a>}
+                    </div>
                   </div>
                 )}
               </div>
