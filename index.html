@@ -703,10 +703,10 @@ RULES: One page max. Max 3 bullets per role. Weave in missing keywords only wher
         </div>
         {editing||!baseResume?(
           <>
-            {!hasPdf&&(
+            {!hasDocx&&(
               <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,padding:"6px 12px",background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:"var(--radius)",color:"var(--text2)",cursor:"pointer",marginBottom:"0.75rem",fontWeight:500}}>
-                {pdfLoading?<><i className="ti ti-loader" style={{fontSize:14}}/>Reading PDF...</>:<><i className="ti ti-file-type-pdf" style={{fontSize:14,color:"#dc2626"}}/>Import from PDF</>}
-                <input type="file" accept=".pdf" onChange={importPdf} style={{display:"none"}} disabled={pdfLoading}/>
+                {docxLoading?<><i className="ti ti-loader" style={{fontSize:14}}/>Reading file...</>:<><i className="ti ti-file-word" style={{fontSize:14,color:"#2563eb"}}/>Import from Word (.docx)</>}
+                <input type="file" accept=".docx" onChange={importDocx} style={{display:"none"}} disabled={docxLoading}/>
               </label>
             )}
             <textarea rows={14} placeholder={"Paste your full resume here, or import a PDF above.\n\nInclude all sections: skills, experience, education, projects."} value={draft} onChange={e=>setDraft(e.target.value)} style={{marginBottom:"0.75rem",fontFamily:"monospace",fontSize:12,lineHeight:1.6}}/>
