@@ -171,7 +171,6 @@ function SettingsScreen({apiKey,onSave}){
   );
 }
 function IntakeScreen({apiKey,onJobSaved}){
-  const [tab,setTab]=useState("analyze");
   const [inputMode,setInputMode]=useState("text");
   const [url,setUrl]=useState("");
   const [text,setText]=useState("");
@@ -179,12 +178,11 @@ function IntakeScreen({apiKey,onJobSaved}){
   const [loading,setLoading]=useState(false);
   const [result,setResult]=useState(null);
   const [error,setError]=useState("");
-  // Quick add fields
+  // Quick add
+  const [showQuickAdd,setShowQuickAdd]=useState(false);
+  const [qaUrl,setQaUrl]=useState("");
   const [qaRole,setQaRole]=useState("");
   const [qaCompany,setQaCompany]=useState("");
-  const [qaLocation,setQaLocation]=useState("");
-  const [qaType,setQaType]=useState("Full-time");
-  const [qaUrl,setQaUrl]=useState("");
   const [qaTrack,setQaTrack]=useState("Business Analytics");
 
   async function analyze(){
