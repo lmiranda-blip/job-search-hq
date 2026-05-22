@@ -535,15 +535,28 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
       const nbTable={top:NB,bottom:NB,left:NB,right:NB,insideH:NB,insideV:NB};
       const noMargin={top:0,bottom:0,left:0,right:0};
 
-      // Borderless 2-col table: left text bold, right date right-aligned
+      // Bold metrics (numbers with K/M/B/+/% markers or $ prefix) in a text string
+      function boldMetrics(text){
+        const rx=/(\$?\d[\d,]*(?:\.\d+)?(?:[KMB])?\+|\d+(?:\.\d+)?%|\$\d[\d,]*(?:\.\d+)?(?:[KMB])?)/g;
+        const parts=[];let last=0,m;
+        while((m=rx.exec(text))!==null){
+          if(m.index>last)parts.push({t:text.slice(last,m.index),b:false});
+          parts.push({t:m[0],b:true});
+          last=m.index+m[0].length;
+        }
+        if(last<text.length)parts.push({t:text.slice(last),b:false});
+        return parts.filter(p=>p.t).map(p=>new TextRun({text:p.t,bold:p.b||undefined,size:SZ,font:F}));
+      }
+
+      // Borderless 2-col table: left content, right date right-aligned (70/30 split)
       function row2col(leftRuns,rightText,spacingBefore){
         return new Table({
           width:{size:100,type:WidthType.PERCENTAGE},
           borders:nbTable,
           rows:[new TableRow({children:[
-            new TableCell({borders:nbAll,margins:noMargin,width:{size:80,type:WidthType.PERCENTAGE},
+            new TableCell({borders:nbAll,margins:noMargin,width:{size:70,type:WidthType.PERCENTAGE},
               children:[new Paragraph({children:leftRuns,spacing:{before:spacingBefore||0,after:0,line:240,lineRule:LR}})]}),
-            new TableCell({borders:nbAll,margins:noMargin,width:{size:20,type:WidthType.PERCENTAGE},
+            new TableCell({borders:nbAll,margins:noMargin,width:{size:30,type:WidthType.PERCENTAGE},
               children:[new Paragraph({children:[new TextRun({text:rightText||"",size:SZ,font:F})],alignment:AlignmentType.RIGHT,spacing:{before:spacingBefore||0,after:0,line:240,lineRule:LR}})]})
           ]})]
         });
