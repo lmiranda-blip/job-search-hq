@@ -524,43 +524,63 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
     localStorage.removeItem("jsc_resume_docx");setHasDocx(false);
   }
 
-  async function generateTailoredDocx(structured){
-    if(!window.docx){alert("Word library not loaded yet — please wait a moment and try again.");return;}
+  async function generateTailoredDocx(structured,companyName){
+    if(!window.docx){alert("Word library not loaded yet — please refresh and try again.");return;}
     setGenerating(true);
     try{
-      const {Document,Paragraph,TextRun,TabStopType,AlignmentType,BorderStyle,Packer,convertInchesToTwip}=window.docx;
-      const DocTab=window.docx.Tab;
-      const mkTab=()=>DocTab?new DocTab():new TextRun({text:"  "});
-      const F="Calibri",SZ=20,SZ_NAME=40,TAB=10060,LR="auto";
-      const ps=[];
-      ps.push(new Paragraph({children:[new TextRun({text:structured.name||"",bold:true,size:SZ_NAME,font:F})],alignment:AlignmentType.CENTER,spacing:{after:40}}));
-      ps.push(new Paragraph({children:[new TextRun({text:(structured.contact||"").replace(/\|/g,"•"),size:SZ,font:F})],alignment:AlignmentType.CENTER,spacing:{after:80}}));
+      const {Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,BorderStyle,Packer,convertInchesToTwip}=window.docx;
+      const F="Calibri",SZ=20,SZ_NAME=40,LR="auto";
+      const NB={style:BorderStyle.NONE,size:0,color:"FFFFFF"};
+      const nbAll={top:NB,bottom:NB,left:NB,right:NB};
+      const nbTable={top:NB,bottom:NB,left:NB,right:NB,insideH:NB,insideV:NB};
+      const noMargin={top:0,bottom:0,left:0,right:0};
+
+      // Borderless 2-col table: left text bold, right date right-aligned
+      function row2col(leftRuns,rightText,spacingBefore){
+        return new Table({
+          width:{size:100,type:WidthType.PERCENTAGE},
+          borders:nbTable,
+          rows:[new TableRow({children:[
+            new TableCell({borders:nbAll,margins:noMargin,width:{size:80,type:WidthType.PERCENTAGE},
+              children:[new Paragraph({children:leftRuns,spacing:{before:spacingBefore||0,after:0,line:240,lineRule:LR}})]}),
+            new TableCell({borders:nbAll,margins:noMargin,width:{size:20,type:WidthType.PERCENTAGE},
+              children:[new Paragraph({children:[new TextRun({text:rightText||"",size:SZ,font:F})],alignment:AlignmentType.RIGHT,spacing:{before:spacingBefore||0,after:0,line:240,lineRule:LR}})]})
+          ]})]
+        });
+      }
+
+      const ch=[];
+      ch.push(new Paragraph({children:[new TextRun({text:structured.name||"",bold:true,size:SZ_NAME,font:F})],alignment:AlignmentType.CENTER,spacing:{before:0,after:30,line:240,lineRule:LR}}));
+      ch.push(new Paragraph({children:[new TextRun({text:(structured.contact||"").replace(/\|/g,"•"),size:SZ,font:F})],alignment:AlignmentType.CENTER,spacing:{before:0,after:50,line:240,lineRule:LR}}));
+
       for(const sec of structured.sections||[]){
-        ps.push(new Paragraph({children:[new TextRun({text:sec.title||"",bold:true,size:SZ,font:F})],border:{bottom:{color:"000000",space:1,size:6,style:BorderStyle.SINGLE}},spacing:{before:160,after:40,line:252,lineRule:LR},tabStops:[{type:TabStopType.RIGHT,position:TAB}]}));
+        ch.push(new Paragraph({children:[new TextRun({text:sec.title||"",bold:true,size:SZ,font:F})],border:{bottom:{color:"000000",space:1,size:6,style:BorderStyle.SINGLE}},spacing:{before:90,after:25,line:240,lineRule:LR}}));
         if(sec.type==="education"){
           for(const e of sec.entries||[]){
-            ps.push(new Paragraph({children:[new TextRun({text:e.institution||"",bold:true,size:SZ,font:F}),mkTab(),new TextRun({text:e.dates||"",size:SZ,font:F})],tabStops:[{type:TabStopType.RIGHT,position:TAB}],spacing:{before:60,after:0,line:252,lineRule:LR}}));
-            ps.push(new Paragraph({children:[new TextRun({text:e.degree||"",bold:true,italics:true,size:SZ,font:F}),...(e.gpa?[mkTab(),new TextRun({text:"GPA: "+e.gpa,size:SZ,font:F})]:[])],tabStops:[{type:TabStopType.RIGHT,position:TAB}],spacing:{after:0,line:240,lineRule:LR}}));
-            for(const d of e.details||[])ps.push(new Paragraph({children:[new TextRun({text:d,size:SZ,font:F})],spacing:{after:0,line:240,lineRule:LR}}));
+            ch.push(row2col([new TextRun({text:e.institution||"",bold:true,size:SZ,font:F})],e.dates,50));
+            ch.push(row2col([new TextRun({text:e.degree||"",bold:true,italics:true,size:SZ,font:F})],e.gpa?"GPA: "+e.gpa:"",0));
+            for(const d of e.details||[])ch.push(new Paragraph({children:[new TextRun({text:d,size:SZ,font:F})],spacing:{before:0,after:0,line:240,lineRule:LR}}));
           }
         }else if(sec.type==="skills"){
-          for(const e of sec.entries||[])ps.push(new Paragraph({children:[new TextRun({text:(e.label||"")+": ",bold:true,size:SZ,font:F}),new TextRun({text:e.content||"",size:SZ,font:F})],spacing:{after:0,line:240,lineRule:LR}}));
+          for(const e of sec.entries||[])ch.push(new Paragraph({children:[new TextRun({text:(e.label||"")+": ",bold:true,size:SZ,font:F}),new TextRun({text:e.content||"",size:SZ,font:F})],spacing:{before:0,after:0,line:235,lineRule:LR}}));
         }else{
           for(const e of sec.entries||[]){
-            ps.push(new Paragraph({children:[new TextRun({text:e.organization||"",bold:true,size:SZ,font:F}),mkTab(),new TextRun({text:e.dates||"",size:SZ,font:F})],tabStops:[{type:TabStopType.RIGHT,position:TAB}],spacing:{before:60,after:0,line:252,lineRule:LR}}));
-            if(e.title)ps.push(new Paragraph({children:[new TextRun({text:e.title,italics:true,size:SZ,font:F})],spacing:{after:0,line:240,lineRule:LR}}));
-            for(const b of e.bullets||[])ps.push(new Paragraph({children:[new TextRun({text:b,size:SZ,font:F})],bullet:{level:0},spacing:{after:0,line:240,lineRule:LR}}));
+            ch.push(row2col([new TextRun({text:e.organization||"",bold:true,size:SZ,font:F})],e.dates,50));
+            if(e.title)ch.push(new Paragraph({children:[new TextRun({text:e.title,italics:true,size:SZ,font:F})],spacing:{before:0,after:0,line:240,lineRule:LR}}));
+            for(const b of e.bullets||[])ch.push(new Paragraph({children:[new TextRun({text:b,size:SZ,font:F})],bullet:{level:0},spacing:{before:0,after:0,line:235,lineRule:LR}}));
           }
         }
       }
-      const doc=new Document({sections:[{properties:{page:{margin:{top:convertInchesToTwip(0.75),bottom:convertInchesToTwip(0.75),left:convertInchesToTwip(0.75),right:convertInchesToTwip(0.75)}}},children:ps}]});
+
+      const doc=new Document({sections:[{properties:{page:{margin:{top:convertInchesToTwip(0.6),bottom:convertInchesToTwip(0.6),left:convertInchesToTwip(0.7),right:convertInchesToTwip(0.7)}}},children:ch}]});
       const blob=await Packer.toBlob(doc);
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");
       a.style.display="none";
       document.body.appendChild(a);
       a.href=url;
-      a.setAttribute("download","Resume_Tailored.docx");
+      const safe=(companyName||"Company").replace(/[^a-zA-Z0-9]/g,"");
+      a.setAttribute("download","LuisMiranda"+safe+".docx");
       a.click();
       setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},2000);
     }catch(err){
