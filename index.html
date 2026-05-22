@@ -470,6 +470,7 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
   const [baseResume,setBaseResume]=useState(()=>localStorage.getItem("jsc_resume")||"");
   const [editing,setEditing]=useState(!localStorage.getItem("jsc_resume"));
   const [draft,setDraft]=useState(()=>localStorage.getItem("jsc_resume")||"");
+  const [hasPdf,setHasPdf]=useState(()=>!!localStorage.getItem("jsc_resume_pdf"));
   const [jobs]=useState(()=>JSON.parse(localStorage.getItem("jsc_jobs")||"[]"));
   const [selectedJobId,setSelectedJobId]=useState(tailorJob?.id||null);
   const [loading,setLoading]=useState(false);
@@ -493,21 +494,53 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
     setPdfLoading(true);
     try{
       const arrayBuffer=await file.arrayBuffer();
+      // Lock original PDF on first import only
+      if(!hasPdf){
+        const bytes=new Uint8Array(arrayBuffer.slice(0));
+        let b64="";
+        const chunk=8192;
+        for(let i=0;i<bytes.length;i+=chunk){b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));}
+        localStorage.setItem("jsc_resume_pdf",btoa(b64));
+        setHasPdf(true);
+      }
       const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
       let text="";
       for(let i=1;i<=pdf.numPages;i++){
         const page=await pdf.getPage(i);
         const content=await page.getTextContent();
-        const pageText=content.items.map(item=>item.str).join(" ");
+        const items=content.items;
+        let pageText="";
+        let lastY=null;
+        for(const item of items){
+          if(lastY!==null&&Math.abs(item.transform[5]-lastY)>3)pageText+="\n";
+          pageText+=item.str+" ";
+          lastY=item.transform[5];
+        }
         text+=pageText+"\n";
       }
       const cleaned=text.replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
       setDraft(cleaned);setEditing(true);
-    }catch(err){
-      alert("Could not read PDF: "+err.message);
-    }
+    }catch(err){alert("Could not read PDF: "+err.message);}
     setPdfLoading(false);
     e.target.value="";
+  }
+
+  function viewOriginalPdf(){
+    const b64=localStorage.getItem("jsc_resume_pdf");
+    if(!b64)return;
+    try{
+      const bin=atob(b64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+      const blob=new Blob([bytes],{type:"application/pdf"});
+      window.open(URL.createObjectURL(blob),"_blank");
+    }catch(err){alert("Could not open PDF: "+err.message);}
+  }
+
+  function replacePdf(){
+    if(!confirm("Replace your locked original PDF? This cannot be undone."))return;
+    localStorage.removeItem("jsc_resume_pdf");
+    setHasPdf(false);
   }
 
   function addExperience(){
@@ -516,6 +549,59 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
     const updated=(baseResume+block).trim();
     setDraft(updated);setBaseResume(updated);localStorage.setItem("jsc_resume",updated);
     setExpCompany("");setExpRole("");setExpDates("");setExpBullets("");setShowAddExp(false);
+  }
+
+  function buildResumeHTML(s){
+    if(!s)return "";
+    const esc=t=>(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const renderSec=sec=>{
+      if(sec.type==="education"){
+        return `<div class="sec"><div class="sec-title">${esc(sec.title)}</div>${(sec.entries||[]).map(e=>`<div class="entry"><div class="row-sb"><b>${esc(e.institution)}</b><span>${esc(e.dates)}</span></div><div class="row-sb italic"><span>${esc(e.degree)}</span>${e.gpa?`<span>GPA: ${esc(e.gpa)}</span>`:""}</div>${e.details?.length?`<ul>${e.details.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}</div>`).join("")}</div>`;
+      }
+      if(sec.type==="experience"||sec.type==="projects"){
+        return `<div class="sec"><div class="sec-title">${esc(sec.title)}</div>${(sec.entries||[]).map(e=>`<div class="entry"><div class="row-sb"><b>${esc(e.title||e.role||"")}</b><span>${esc(e.dates)}</span></div><div class="row-sb italic"><span>${esc(e.organization||e.company||"")}</span><span>${esc(e.location||"")}</span></div>${e.bullets?.length?`<ul>${e.bullets.map(b=>`<li>${esc(b)}</li>`).join("")}</ul>`:""}</div>`).join("")}</div>`;
+      }
+      return `<div class="sec"><div class="sec-title">${esc(sec.title)}</div><div class="text-sec">${esc(sec.content||"")}</div></div>`;
+    };
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Times New Roman',Times,serif;font-size:10.5pt;color:#000;background:#fff}
+.page{width:8.5in;min-height:11in;padding:0.6in 0.7in;background:#fff}
+.name{font-size:18pt;font-weight:bold;text-align:center;letter-spacing:0.01em;margin-bottom:3pt}
+.contact{text-align:center;font-size:9.5pt;color:#111;margin-bottom:10pt}
+.sec{margin-top:9pt}
+.sec-title{font-size:10.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1.2px solid #000;padding-bottom:1.5pt;margin-bottom:5pt}
+.entry{margin-bottom:6pt}
+.row-sb{display:flex;justify-content:space-between;font-size:10.5pt}
+.italic{font-style:italic;font-size:10pt;color:#222}
+ul{margin:2pt 0 0 13pt}
+li{font-size:10pt;line-height:1.33;margin-bottom:1pt}
+.text-sec{font-size:10pt;line-height:1.4}
+@media print{@page{size:letter;margin:0}body{margin:0}.page{box-shadow:none}}
+</style></head><body><div class="page">
+<div class="name">${esc(s.name)}</div>
+<div class="contact">${esc(s.contact)}</div>
+${(s.sections||[]).map(renderSec).join("")}
+</div></body></html>`;
+  }
+
+  function openPreview(){
+    const s=result?.tailored_structured;
+    if(!s)return;
+    const html=buildResumeHTML(s);
+    const w=window.open("","_blank","width=900,height=700");
+    w.document.write(html);
+    w.document.close();
+  }
+
+  function printPreview(){
+    const s=result?.tailored_structured;
+    if(!s)return;
+    const html=buildResumeHTML(s);
+    const w=window.open("","_blank");
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>w.print(),600);
   }
 
   async function tailor(){
@@ -531,7 +617,7 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
       const resp=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
         headers:{"Content-Type":"application/json","x-api-key":cleanKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:3000,messages:[{role:"user",content:`You are a resume coach helping a college senior tailor their resume for a specific job. Return ONLY valid JSON, no markdown, no explanation.
+        body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:4000,messages:[{role:"user",content:`You are a resume coach helping a college senior tailor their resume. Return ONLY valid JSON, no markdown.
 
 CANDIDATE RESUME:
 ${baseResume}
@@ -539,13 +625,21 @@ ${baseResume}
 TARGET JOB:
 ${jobCtx}
 
-Return this exact JSON schema:
+Return this exact JSON:
 {
-  "missing_keywords": string[] (keywords/skills in the job that are absent from the resume, max 10),
-  "present_keywords": string[] (important keywords from the job already in the resume, max 8),
-  "bullet_rewrites": [{"original": string, "rewritten": string (XYZ format: Accomplished [X] as measured by [Y], by doing [Z]), "reason": string}] (3-5 most impactful rewrites),
-  "tailored_resume": string (full resume text with rewrites applied and missing keywords woven in where truthful),
-  "top_tip": string (one high-impact piece of advice specific to this application)
+  "missing_keywords": string[] (max 10 keywords absent from resume),
+  "present_keywords": string[] (max 8 keywords already present),
+  "bullet_rewrites": [{"original":string,"rewritten":string,"reason":string}] (3-5 rewrites in XYZ format: Accomplished X as measured by Y by doing Z),
+  "top_tip": string,
+  "tailored_structured": {
+    "name": string,
+    "contact": string (pipe-separated: email | phone | LinkedIn | location),
+    "sections": array preserving EXACT same order and sections as the original resume. Each object is one of:
+      {"title":string,"type":"experience","entries":[{"title":string,"organization":string,"dates":string,"location":string,"bullets":string[]}]}
+      {"title":string,"type":"education","entries":[{"institution":string,"degree":string,"dates":string,"gpa":string,"details":string[]}]}
+      {"title":string,"type":"text","content":string}
+    IMPORTANT: Keep to one page. Max 3 bullets per role. Weave in missing keywords only where truthful.
+  }
 }`}]})
       });
       const data=await resp.json();
@@ -557,38 +651,50 @@ Return this exact JSON schema:
   }
 
   function copyResume(){
-    if(!result?.tailored_resume)return;
-    navigator.clipboard.writeText(result.tailored_resume).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
+    const s=result?.tailored_structured;
+    if(!s)return;
+    let t=`${s.name}\n${s.contact}\n\n`;
+    (s.sections||[]).forEach(sec=>{
+      t+=`${sec.title.toUpperCase()}\n`;
+      if(sec.type==="text"){t+=sec.content+"\n\n";}
+      else{(sec.entries||[]).forEach(e=>{
+        t+=`${e.title||e.institution||""} | ${e.organization||e.company||e.degree||""} | ${e.dates||""}\n`;
+        (e.bullets||e.details||[]).forEach(b=>{t+=`• ${b}\n`;});
+        t+="\n";
+      });}
+    });
+    navigator.clipboard.writeText(t.trim()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
   }
-
-  const selectedJob=jobs.find(j=>j.id===selectedJobId);
 
   return (
     <div>
+      {hasPdf&&(
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:"1rem",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"var(--radius)",padding:"10px 14px"}}>
+          <i className="ti ti-file-type-pdf" style={{color:"#dc2626",fontSize:16}}/>
+          <span style={{flex:1,fontSize:13,fontWeight:500,color:"var(--text)"}}>Original PDF locked</span>
+          <button onClick={viewOriginalPdf} style={{fontSize:12,padding:"4px 10px",color:"var(--accent)"}}>View original</button>
+          <button onClick={replacePdf} style={{fontSize:12,padding:"4px 10px",color:"var(--text3)"}}>Replace</button>
+        </div>
+      )}
+
       <div className="card" style={{marginBottom:"1rem"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>
           <p style={{fontWeight:500,fontSize:15}}>Your base resume</p>
           {!editing&&baseResume&&(
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowAddExp(v=>!v)} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}>
-                <i className="ti ti-plus" style={{marginRight:4}}/>Add experience
-              </button>
-              <label style={{fontSize:12,padding:"4px 10px",color:"var(--text2)",cursor:"pointer",border:"1px solid var(--border)",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:4}}>
-                <i className="ti ti-file-type-pdf" style={{fontSize:13,color:"#dc2626"}}/>Re-import PDF
-                <input type="file" accept=".pdf" onChange={importPdf} style={{display:"none"}} disabled={pdfLoading}/>
-              </label>
-              <button onClick={()=>{setDraft(baseResume);setEditing(true);}} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}>
-                <i className="ti ti-pencil" style={{marginRight:4}}/>Edit
-              </button>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <button onClick={()=>setShowAddExp(v=>!v)} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}><i className="ti ti-plus" style={{marginRight:4}}/>Add experience</button>
+              <button onClick={()=>{setDraft(baseResume);setEditing(true);}} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}><i className="ti ti-pencil" style={{marginRight:4}}/>Edit text</button>
             </div>
           )}
         </div>
         {editing||!baseResume?(
           <>
-            <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,padding:"6px 12px",background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:"var(--radius)",color:"var(--text2)",cursor:"pointer",marginBottom:"0.75rem",fontWeight:500}}>
-              {pdfLoading?<><i className="ti ti-loader" style={{fontSize:14}}/>Reading PDF...</>:<><i className="ti ti-file-type-pdf" style={{fontSize:14,color:"#dc2626"}}/>Import from PDF</>}
-              <input type="file" accept=".pdf" onChange={importPdf} style={{display:"none"}} disabled={pdfLoading}/>
-            </label>
+            {!hasPdf&&(
+              <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,padding:"6px 12px",background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:"var(--radius)",color:"var(--text2)",cursor:"pointer",marginBottom:"0.75rem",fontWeight:500}}>
+                {pdfLoading?<><i className="ti ti-loader" style={{fontSize:14}}/>Reading PDF...</>:<><i className="ti ti-file-type-pdf" style={{fontSize:14,color:"#dc2626"}}/>Import from PDF</>}
+                <input type="file" accept=".pdf" onChange={importPdf} style={{display:"none"}} disabled={pdfLoading}/>
+              </label>
+            )}
             <textarea rows={14} placeholder={"Paste your full resume here, or import a PDF above.\n\nInclude all sections: skills, experience, education, projects."} value={draft} onChange={e=>setDraft(e.target.value)} style={{marginBottom:"0.75rem",fontFamily:"monospace",fontSize:12,lineHeight:1.6}}/>
             <div style={{display:"flex",gap:8}}>
               <button className="btn-primary" onClick={saveResume} style={{flex:1,padding:"9px"}}><i className="ti ti-device-floppy" style={{marginRight:6}}/>Save resume</button>
@@ -662,7 +768,7 @@ Return this exact JSON schema:
           </div>
           {result.bullet_rewrites?.length>0&&(
             <div className="card" style={{marginBottom:"1rem"}}>
-              <p style={{fontWeight:500,fontSize:14,marginBottom:"1rem"}}>Bullet rewrites <span style={{fontSize:12,color:"var(--text2)",fontWeight:400}}>XYZ format</span></p>
+              <p style={{fontWeight:500,fontSize:14,marginBottom:"1rem"}}>Bullet rewrites <span style={{fontSize:12,color:"var(--text2)",fontWeight:400}}>— XYZ format</span></p>
               <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
                 {result.bullet_rewrites.map((b,i)=>(
                   <div key={i} style={{paddingBottom:"1rem",borderBottom:i<result.bullet_rewrites.length-1?"1px solid var(--border)":"none"}}>
@@ -674,15 +780,46 @@ Return this exact JSON schema:
               </div>
             </div>
           )}
-          <div className="card">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>
-              <p style={{fontWeight:500,fontSize:14}}>Tailored resume</p>
-              <button onClick={copyResume} style={{fontSize:12,padding:"5px 12px",color:copied?"#166534":"var(--text2)",background:copied?"#DCFCE7":"transparent",border:"1px solid",borderColor:copied?"#166534":"var(--border)"}}>
-                <i className={`ti ${copied?"ti-check":"ti-copy"}`} style={{marginRight:5}}/>{copied?"Copied!":"Copy text"}
-              </button>
+          {result.tailored_structured&&(
+            <div className="card">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+                <p style={{fontWeight:500,fontSize:14}}>Tailored resume</p>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={copyResume} style={{fontSize:12,padding:"5px 10px",color:copied?"#166534":"var(--text2)",background:copied?"#DCFCE7":"transparent",border:"1px solid",borderColor:copied?"#166534":"var(--border)",borderRadius:"var(--radius)"}}>
+                    <i className={`ti ${copied?"ti-check":"ti-copy"}`} style={{marginRight:4}}/>{copied?"Copied!":"Copy"}
+                  </button>
+                  <button onClick={openPreview} style={{fontSize:12,padding:"5px 10px",color:"var(--text2)",border:"1px solid var(--border)",borderRadius:"var(--radius)"}}>
+                    <i className="ti ti-eye" style={{marginRight:4}}/>Preview
+                  </button>
+                  <button onClick={printPreview} style={{fontSize:12,padding:"5px 10px",color:"var(--accent)",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:4}}>
+                    <i className="ti ti-download" style={{fontSize:13}}/>Download PDF
+                  </button>
+                </div>
+              </div>
+              <div style={{background:"var(--surface2)",borderRadius:"var(--radius)",padding:"14px",fontSize:12,lineHeight:1.6,color:"var(--text2)"}}>
+                <p style={{fontWeight:700,fontSize:14,color:"var(--text)",textAlign:"center",marginBottom:2}}>{result.tailored_structured.name}</p>
+                <p style={{fontSize:11,textAlign:"center",marginBottom:12}}>{result.tailored_structured.contact}</p>
+                {result.tailored_structured.sections?.map((sec,i)=>(
+                  <div key={i} style={{marginBottom:8}}>
+                    <p style={{fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:"0.07em",borderBottom:"1px solid var(--border2)",paddingBottom:2,marginBottom:4,color:"var(--text)"}}>{sec.title}</p>
+                    {sec.type==="text"?<p style={{fontSize:11}}>{sec.content}</p>:(sec.entries||[]).map((e,j)=>(
+                      <div key={j} style={{marginBottom:5}}>
+                        <div style={{display:"flex",justifyContent:"space-between"}}>
+                          <span style={{fontWeight:600,fontSize:11,color:"var(--text)"}}>{e.title||e.institution}</span>
+                          <span style={{fontSize:11}}>{e.dates}</span>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between"}}>
+                          <span style={{fontSize:11,fontStyle:"italic"}}>{e.organization||e.company||e.degree}</span>
+                          {(e.gpa||e.location)&&<span style={{fontSize:11,fontStyle:"italic"}}>{e.gpa?"GPA: "+e.gpa:e.location}</span>}
+                        </div>
+                        {(e.bullets||e.details||[]).map((b,k)=><p key={k} style={{fontSize:11,paddingLeft:10,lineHeight:1.4}}>• {b}</p>)}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
-            <pre style={{fontSize:12,lineHeight:1.65,whiteSpace:"pre-wrap",color:"var(--text)",background:"var(--surface2)",borderRadius:"var(--radius)",padding:"12px 14px",maxHeight:420,overflowY:"auto",fontFamily:"monospace"}}>{result.tailored_resume}</pre>
-          </div>
+          )}
         </div>
       )}
     </div>
