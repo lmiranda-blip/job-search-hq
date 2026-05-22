@@ -581,7 +581,11 @@ Return this exact JSON schema:
         </div>
         {editing||!baseResume?(
           <>
-            <textarea rows={14} placeholder={"Paste your full resume here as plain text.\n\nInclude all sections: skills, experience, education, projects."} value={draft} onChange={e=>setDraft(e.target.value)} style={{marginBottom:"0.75rem",fontFamily:"monospace",fontSize:12,lineHeight:1.6}}/>
+            <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,padding:"6px 12px",background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:"var(--radius)",color:"var(--text2)",cursor:"pointer",marginBottom:"0.75rem",fontWeight:500}}>
+              {pdfLoading?<><i className="ti ti-loader" style={{fontSize:14}}/>Reading PDF...</>:<><i className="ti ti-file-type-pdf" style={{fontSize:14,color:"#dc2626"}}/>Import from PDF</>}
+              <input type="file" accept=".pdf" onChange={importPdf} style={{display:"none"}} disabled={pdfLoading}/>
+            </label>
+            <textarea rows={14} placeholder={"Paste your full resume here, or import a PDF above.\n\nInclude all sections: skills, experience, education, projects."} value={draft} onChange={e=>setDraft(e.target.value)} style={{marginBottom:"0.75rem",fontFamily:"monospace",fontSize:12,lineHeight:1.6}}/>
             <div style={{display:"flex",gap:8}}>
               <button className="btn-primary" onClick={saveResume} style={{flex:1,padding:"9px"}}><i className="ti ti-device-floppy" style={{marginRight:6}}/>Save resume</button>
               {baseResume&&<button onClick={()=>setEditing(false)} style={{padding:"9px 16px"}}>Cancel</button>}
