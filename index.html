@@ -470,7 +470,7 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
   const [baseResume,setBaseResume]=useState(()=>localStorage.getItem("jsc_resume")||"");
   const [editing,setEditing]=useState(!localStorage.getItem("jsc_resume"));
   const [draft,setDraft]=useState(()=>localStorage.getItem("jsc_resume")||"");
-  const [hasPdf,setHasPdf]=useState(()=>!!localStorage.getItem("jsc_resume_pdf"));
+  const [hasDocx,setHasDocx]=useState(()=>!!localStorage.getItem("jsc_resume_docx"));
   const [jobs]=useState(()=>JSON.parse(localStorage.getItem("jsc_jobs")||"[]"));
   const [selectedJobId,setSelectedJobId]=useState(tailorJob?.id||null);
   const [loading,setLoading]=useState(false);
