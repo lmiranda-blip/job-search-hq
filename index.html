@@ -580,7 +580,7 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
           for(const e of sec.entries||[]){
             ch.push(row2col([new TextRun({text:e.organization||"",bold:true,size:SZ,font:F})],e.dates,50));
             if(e.title)ch.push(new Paragraph({children:[new TextRun({text:e.title,italics:true,size:SZ,font:F})],spacing:{before:0,after:0,line:240,lineRule:LR}}));
-            for(const b of e.bullets||[])ch.push(new Paragraph({children:[new TextRun({text:b,size:SZ,font:F})],bullet:{level:0},spacing:{before:0,after:0,line:235,lineRule:LR}}));
+            for(const b of e.bullets||[])ch.push(new Paragraph({children:boldMetrics(b),bullet:{level:0},spacing:{before:0,after:0,line:235,lineRule:LR}}));
           }
         }
       }
