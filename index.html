@@ -487,6 +487,29 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
 
   function saveResume(){localStorage.setItem("jsc_resume",draft);setBaseResume(draft);setEditing(false);}
 
+  async function importPdf(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    setPdfLoading(true);
+    try{
+      const arrayBuffer=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+      let text="";
+      for(let i=1;i<=pdf.numPages;i++){
+        const page=await pdf.getPage(i);
+        const content=await page.getTextContent();
+        const pageText=content.items.map(item=>item.str).join(" ");
+        text+=pageText+"\n";
+      }
+      const cleaned=text.replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
+      setDraft(cleaned);setEditing(true);
+    }catch(err){
+      alert("Could not read PDF: "+err.message);
+    }
+    setPdfLoading(false);
+    e.target.value="";
+  }
+
   function addExperience(){
     if(!expCompany.trim()&&!expRole.trim())return;
     const block=`\n${expRole.trim()}${expCompany.trim()?" | "+expCompany.trim():""}\n${expDates.trim()}\n${expBullets.split("\n").map(b=>b.trim()?"• "+b.trim():"").filter(Boolean).join("\n")}`;
