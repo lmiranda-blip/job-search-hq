@@ -656,7 +656,7 @@ Return this exact JSON (preserve the EXACT section order and structure of the or
 {
   "missing_keywords": string[] (max 10 keywords absent from the resume),
   "present_keywords": string[] (max 8 important keywords already present),
-  "bullet_rewrites": [{"original":string,"rewritten":string,"reason":string}] (3-5 rewrites in XYZ format: Accomplished X as measured by Y by doing Z),
+  "bullet_rewrites": [{"original":string,"rewritten":string,"reason":string}] (2-3 light rewrites — only surface-level wording changes to better match the job, never change the facts or numbers),
   "top_tip": string (one high-impact piece of advice for this specific application),
   "tailored_structured": {
     "name": "Luis Miranda Morales",
@@ -670,7 +670,12 @@ Return this exact JSON (preserve the EXACT section order and structure of the or
     ]
   }
 }
-RULES: One page max. Max 3 bullets per role. Weave in missing keywords only where truthful. Keep all existing sections and order.`}]})
+CRITICAL RULES:
+- Keep every bullet as close to the original as possible. Only make minimal wording tweaks to naturally include a relevant keyword — do NOT rewrite the entire bullet or change what happened.
+- Never invent experiences, change companies, alter dates, or fabricate numbers. All quantitative data (174K+, 25+, 500+, etc.) must be preserved exactly.
+- If a bullet already fits the job well, copy it verbatim — do not change it.
+- Only add a missing keyword if it fits naturally and truthfully into an existing bullet.
+- One page max. Max 3 bullets per role. Keep all sections and order identical to the original.`}]})
       });
       const data=await resp.json();
       if(data.error){setError("Anthropic error: "+(data.error.message||JSON.stringify(data.error)));setLoading(false);return;}
