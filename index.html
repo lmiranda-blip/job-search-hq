@@ -171,18 +171,27 @@ function SettingsScreen({apiKey,onSave}){
   );
 }
 function IntakeScreen({apiKey,onJobSaved}){
-  const [mode,setMode]=useState("text");
+  const [tab,setTab]=useState("analyze");
+  const [inputMode,setInputMode]=useState("text");
   const [url,setUrl]=useState("");
   const [text,setText]=useState("");
   const [track,setTrack]=useState("Business Analytics");
   const [loading,setLoading]=useState(false);
   const [result,setResult]=useState(null);
   const [error,setError]=useState("");
+  // Quick add fields
+  const [qaRole,setQaRole]=useState("");
+  const [qaCompany,setQaCompany]=useState("");
+  const [qaLocation,setQaLocation]=useState("");
+  const [qaType,setQaType]=useState("Full-time");
+  const [qaUrl,setQaUrl]=useState("");
+  const [qaTrack,setQaTrack]=useState("Business Analytics");
+
   async function analyze(){
     const cleanKey=(apiKey||"").trim();
     if(!cleanKey){setError("Add your API key in Settings first.");return;}
     if(!cleanKey.startsWith("sk-ant-")){setError("API key looks wrong — check Settings.");return;}
-    const input=mode==="url"?`Job posting URL: ${url}`:text;
+    const input=inputMode==="url"?`Job posting URL: ${url}`:text;
     if(!input.trim()){setError("Paste a job description or URL first.");return;}
     setError("");setLoading(true);setResult(null);
     try{
@@ -236,64 +245,132 @@ ${input}`}]
     }
     setLoading(false);
   }
-  function saveJob(){
+  function saveAnalyzed(){
     if(!result)return;
     const jobs=JSON.parse(localStorage.getItem("jsc_jobs")||"[]");
-    jobs.unshift({id:Date.now(),...result,track,status:"Saved",savedAt:new Date().toLocaleDateString(),appliedAt:null,notes:"",url:mode==="url"?url:""});
+    jobs.unshift({id:Date.now(),...result,track,status:"Saved",savedAt:new Date().toLocaleDateString(),appliedAt:null,notes:"",url:inputMode==="url"?url:""});
     localStorage.setItem("jsc_jobs",JSON.stringify(jobs));
     setResult(null);setText("");setUrl("");
     onJobSaved(result.role+" at "+result.company);
   }
+  function quickAdd(){
+    if(!qaRole.trim()||!qaCompany.trim()){setError("Role and company are required.");return;}
+    const jobs=JSON.parse(localStorage.getItem("jsc_jobs")||"[]");
+    jobs.unshift({id:Date.now(),role:qaRole.trim(),company:qaCompany.trim(),location:qaLocation.trim()||"—",type:qaType,salary:null,summary:"",required_skills:[],nice_to_haves:[],fit_notes:"",match:null,track:qaTrack,status:"Saved",savedAt:new Date().toLocaleDateString(),appliedAt:null,notes:"",url:qaUrl.trim()});
+    localStorage.setItem("jsc_jobs",JSON.stringify(jobs));
+    setQaRole("");setQaCompany("");setQaLocation("");setQaUrl("");setError("");
+    onJobSaved(qaRole.trim()+" at "+qaCompany.trim());
+  }
+
   return (
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:"1.25rem"}}>
-        <button onClick={()=>setMode("text")} style={mode==="text"?{background:"var(--surface2)",fontWeight:500}:{}}><i className="ti ti-align-left" style={{marginRight:6}}/>Paste description</button>
-        <button onClick={()=>setMode("url")} style={mode==="url"?{background:"var(--surface2)",fontWeight:500}:{}}><i className="ti ti-link" style={{marginRight:6}}/>Paste URL</button>
+      <div style={{display:"flex",gap:0,marginBottom:"1.5rem",background:"var(--surface2)",borderRadius:"var(--radius)",padding:4}}>
+        <button onClick={()=>{setTab("analyze");setError("");setResult(null);}} style={{flex:1,border:"none",borderRadius:8,padding:"9px 0",fontWeight:500,fontSize:13,background:tab==="analyze"?"var(--surface)":"transparent",color:tab==="analyze"?"var(--accent)":"var(--text2)",boxShadow:tab==="analyze"?"0 1px 4px rgba(37,99,235,0.12)":"none",transition:"all 0.15s"}}>
+          <i className="ti ti-sparkles" style={{marginRight:6}}/>Analyze job
+        </button>
+        <button onClick={()=>{setTab("quick");setError("");setResult(null);}} style={{flex:1,border:"none",borderRadius:8,padding:"9px 0",fontWeight:500,fontSize:13,background:tab==="quick"?"var(--surface)":"transparent",color:tab==="quick"?"var(--accent)":"var(--text2)",boxShadow:tab==="quick"?"0 1px 4px rgba(37,99,235,0.12)":"none",transition:"all 0.15s"}}>
+          <i className="ti ti-bookmark" style={{marginRight:6}}/>Add to list
+        </button>
       </div>
-      {mode==="text"
-        ?<textarea rows={8} placeholder="Paste the full job description here..." value={text} onChange={e=>setText(e.target.value)} style={{marginBottom:"0.75rem"}}/>
-        :<input placeholder="https://company.com/careers/role..." value={url} onChange={e=>setUrl(e.target.value)} style={{marginBottom:"0.75rem"}}/>
-      }
-      <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:"0.75rem"}}>
-        <label style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap",fontWeight:500}}>Track:</label>
-        <select value={track} onChange={e=>setTrack(e.target.value)}>
-          {TRACKS.map(t=><option key={t}>{t}</option>)}
-        </select>
-      </div>
-      {error&&<p style={{fontSize:13,color:"#A32D2D",marginBottom:"0.75rem",padding:"8px 12px",background:"#FCEBEB",borderRadius:"var(--radius)"}}>{error}</p>}
-      <button className="btn-primary" onClick={analyze} disabled={loading} style={{width:"100%",marginBottom:"1.5rem",padding:"11px"}}>
-        {loading?<><i className="ti ti-loader" style={{marginRight:6}}/>Analyzing with Claude...</>:<><i className="ti ti-sparkles" style={{marginRight:6}}/>Analyze job</>}
-      </button>
-      {result&&(
+
+      {tab==="analyze"&&(
+        <div>
+          <div style={{display:"flex",gap:8,marginBottom:"1rem"}}>
+            <button onClick={()=>setInputMode("text")} style={inputMode==="text"?{background:"var(--surface2)",fontWeight:500,borderColor:"var(--accent)"}:{}}><i className="ti ti-align-left" style={{marginRight:6}}/>Paste description</button>
+            <button onClick={()=>setInputMode("url")} style={inputMode==="url"?{background:"var(--surface2)",fontWeight:500,borderColor:"var(--accent)"}:{}}><i className="ti ti-link" style={{marginRight:6}}/>Paste URL</button>
+          </div>
+          {inputMode==="text"
+            ?<textarea rows={8} placeholder="Paste the full job description here..." value={text} onChange={e=>setText(e.target.value)} style={{marginBottom:"0.75rem"}}/>
+            :<input placeholder="https://company.com/careers/role..." value={url} onChange={e=>setUrl(e.target.value)} style={{marginBottom:"0.75rem"}}/>
+          }
+          <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:"0.75rem"}}>
+            <label style={{fontSize:13,color:"var(--text2)",whiteSpace:"nowrap",fontWeight:500}}>Track:</label>
+            <select value={track} onChange={e=>setTrack(e.target.value)}>
+              {TRACKS.map(t=><option key={t}>{t}</option>)}
+            </select>
+          </div>
+          {error&&<p style={{fontSize:13,color:"#A32D2D",marginBottom:"0.75rem",padding:"8px 12px",background:"#FCEBEB",borderRadius:"var(--radius)"}}>{error}</p>}
+          <button className="btn-primary" onClick={analyze} disabled={loading} style={{width:"100%",marginBottom:"1.5rem",padding:"11px"}}>
+            {loading?<><i className="ti ti-loader" style={{marginRight:6}}/>Analyzing with Claude...</>:<><i className="ti ti-sparkles" style={{marginRight:6}}/>Analyze job</>}
+          </button>
+          {result&&(
+            <div className="card">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1rem"}}>
+                <div>
+                  <p style={{fontWeight:500,fontSize:17,marginBottom:3}}>{result.role}</p>
+                  <p style={{fontSize:14,color:"var(--text2)"}}>{result.company} · {result.location} · {result.type}</p>
+                  {result.salary&&<p style={{fontSize:13,color:"var(--text2)",marginTop:2}}>{result.salary}</p>}
+                </div>
+                <span className="badge" style={{background:"var(--surface2)",color:"var(--text2)",marginTop:3}}>{track}</span>
+              </div>
+              <p style={{fontSize:14,lineHeight:1.75,color:"var(--text2)",marginBottom:"1rem",paddingBottom:"1rem",borderBottom:"1px solid var(--border)"}}>{result.summary}</p>
+              <div style={{marginBottom:"0.75rem"}}>
+                <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Required skills</p>
+                <div>{result.required_skills?.map(s=><span key={s} className="skill-tag">{s}</span>)}</div>
+              </div>
+              {result.nice_to_haves?.length>0&&(
+                <div style={{marginBottom:"0.75rem"}}>
+                  <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Nice to have</p>
+                  <div>{result.nice_to_haves.map(s=><span key={s} className="skill-tag" style={{background:"var(--surface2)",color:"var(--text2)"}}>{s}</span>)}</div>
+                </div>
+              )}
+              {result.fit_notes&&(
+                <div style={{background:"var(--surface2)",borderRadius:"var(--radius)",padding:"12px 14px",marginTop:"0.75rem"}}>
+                  <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:3,textTransform:"uppercase",letterSpacing:"0.05em"}}>What they're looking for</p>
+                  <p style={{fontSize:13,lineHeight:1.7}}>{result.fit_notes}</p>
+                </div>
+              )}
+              <MatchScorecard match={result.match}/>
+              <button className="btn-primary" onClick={saveAnalyzed} style={{width:"100%",padding:"11px",marginTop:"1rem"}}>
+                <i className="ti ti-plus" style={{marginRight:6}}/>Save to tracker
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab==="quick"&&(
         <div className="card">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1rem"}}>
-            <div>
-              <p style={{fontWeight:500,fontSize:17,marginBottom:3}}>{result.role}</p>
-              <p style={{fontSize:14,color:"var(--text2)"}}>{result.company} · {result.location} · {result.type}</p>
-              {result.salary&&<p style={{fontSize:13,color:"var(--text2)",marginTop:2}}>{result.salary}</p>}
+          <p style={{fontSize:13,color:"var(--text2)",marginBottom:"1.25rem",lineHeight:1.6}}>Bookmark a posting without running an analysis. You can always analyze it later from the tracker.</p>
+          <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
+              <div>
+                <label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Role *</label>
+                <input placeholder="Data Analyst" value={qaRole} onChange={e=>setQaRole(e.target.value)}/>
+              </div>
+              <div>
+                <label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Company *</label>
+                <input placeholder="Acme Corp" value={qaCompany} onChange={e=>setQaCompany(e.target.value)}/>
+              </div>
             </div>
-            <span className="badge" style={{background:"#F1EFE8",color:"#5F5E5A",marginTop:3}}>{track}</span>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
+              <div>
+                <label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Location</label>
+                <input placeholder="Austin, TX" value={qaLocation} onChange={e=>setQaLocation(e.target.value)}/>
+              </div>
+              <div>
+                <label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Type</label>
+                <select value={qaType} onChange={e=>setQaType(e.target.value)}>
+                  {["Full-time","Internship","Contract"].map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
+              <div>
+                <label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Track</label>
+                <select value={qaTrack} onChange={e=>setQaTrack(e.target.value)}>
+                  {TRACKS.map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:12,fontWeight:500,color:"var(--text2)",display:"block",marginBottom:4}}>Job URL</label>
+                <input placeholder="https://..." value={qaUrl} onChange={e=>setQaUrl(e.target.value)}/>
+              </div>
+            </div>
           </div>
-          <p style={{fontSize:14,lineHeight:1.75,color:"var(--text2)",marginBottom:"1rem",paddingBottom:"1rem",borderBottom:"0.5px solid var(--border)"}}>{result.summary}</p>
-          <div style={{marginBottom:"0.75rem"}}>
-            <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Required skills</p>
-            <div>{result.required_skills?.map(s=><span key={s} className="skill-tag">{s}</span>)}</div>
-          </div>
-          {result.nice_to_haves?.length>0&&(
-            <div style={{marginBottom:"0.75rem"}}>
-              <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Nice to have</p>
-              <div>{result.nice_to_haves.map(s=><span key={s} className="skill-tag" style={{background:"#F1EFE8",color:"#5F5E5A"}}>{s}</span>)}</div>
-            </div>
-          )}
-          {result.fit_notes&&(
-            <div style={{background:"var(--surface2)",borderRadius:"var(--radius)",padding:"12px 14px",marginTop:"0.75rem"}}>
-              <p style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:3,textTransform:"uppercase",letterSpacing:"0.05em"}}>What they're looking for</p>
-              <p style={{fontSize:13,lineHeight:1.7}}>{result.fit_notes}</p>
-            </div>
-          )}
-          <MatchScorecard match={result.match}/>
-          <button className="btn-primary" onClick={saveJob} style={{width:"100%",padding:"11px",marginTop:"1rem"}}>
-            <i className="ti ti-plus" style={{marginRight:6}}/>Save to tracker
+          {error&&<p style={{fontSize:13,color:"#A32D2D",marginTop:"0.75rem",padding:"8px 12px",background:"#FCEBEB",borderRadius:"var(--radius)"}}>{error}</p>}
+          <button className="btn-primary" onClick={quickAdd} style={{width:"100%",padding:"11px",marginTop:"1.25rem"}}>
+            <i className="ti ti-bookmark" style={{marginRight:6}}/>Add to list
           </button>
         </div>
       )}
