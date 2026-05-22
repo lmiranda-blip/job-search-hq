@@ -800,13 +800,10 @@ RULES: One page max. Max 3 bullets per role. Weave in missing keywords only wher
                 <p style={{fontWeight:500,fontSize:14}}>Tailored resume</p>
                 <div style={{display:"flex",gap:6}}>
                   <button onClick={copyResume} style={{fontSize:12,padding:"5px 10px",color:copied?"#166534":"var(--text2)",background:copied?"#DCFCE7":"transparent",border:"1px solid",borderColor:copied?"#166534":"var(--border)",borderRadius:"var(--radius)"}}>
-                    <i className={`ti ${copied?"ti-check":"ti-copy"}`} style={{marginRight:4}}/>{copied?"Copied!":"Copy"}
+                    <i className={`ti ${copied?"ti-check":"ti-copy"}`} style={{marginRight:4}}/>{copied?"Copied!":"Copy text"}
                   </button>
-                  <button onClick={openPreview} style={{fontSize:12,padding:"5px 10px",color:"var(--text2)",border:"1px solid var(--border)",borderRadius:"var(--radius)"}}>
-                    <i className="ti ti-eye" style={{marginRight:4}}/>Preview
-                  </button>
-                  <button onClick={printPreview} style={{fontSize:12,padding:"5px 10px",color:"var(--accent)",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:4}}>
-                    <i className="ti ti-download" style={{fontSize:13}}/>Download PDF
+                  <button onClick={()=>generateTailoredDocx(result.tailored_structured)} disabled={generating} style={{fontSize:12,padding:"5px 12px",color:"#fff",background:"#2563eb",border:"none",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer",opacity:generating?0.7:1}}>
+                    <i className="ti ti-file-word" style={{fontSize:13}}/>{generating?"Generating...":"Download .docx"}
                   </button>
                 </div>
               </div>
@@ -816,17 +813,18 @@ RULES: One page max. Max 3 bullets per role. Weave in missing keywords only wher
                 {result.tailored_structured.sections?.map((sec,i)=>(
                   <div key={i} style={{marginBottom:8}}>
                     <p style={{fontWeight:600,fontSize:11,textTransform:"uppercase",letterSpacing:"0.07em",borderBottom:"1px solid var(--border2)",paddingBottom:2,marginBottom:4,color:"var(--text)"}}>{sec.title}</p>
-                    {sec.type==="text"?<p style={{fontSize:11}}>{sec.content}</p>:(sec.entries||[]).map((e,j)=>(
+                    {sec.type==="skills"?(sec.entries||[]).map((e,j)=><p key={j} style={{fontSize:11}}><b>{e.label}:</b> {e.content}</p>)
+                    :sec.type==="education"?(sec.entries||[]).map((e,j)=>(
+                      <div key={j} style={{marginBottom:4}}>
+                        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:600,fontSize:11,color:"var(--text)"}}>{e.institution}</span><span style={{fontSize:11}}>{e.dates}</span></div>
+                        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,fontStyle:"italic"}}>{e.degree}</span>{e.gpa&&<span style={{fontSize:11}}>GPA: {e.gpa}</span>}</div>
+                        {(e.details||[]).map((d,k)=><p key={k} style={{fontSize:11}}>{d}</p>)}
+                      </div>
+                    )):(sec.entries||[]).map((e,j)=>(
                       <div key={j} style={{marginBottom:5}}>
-                        <div style={{display:"flex",justifyContent:"space-between"}}>
-                          <span style={{fontWeight:600,fontSize:11,color:"var(--text)"}}>{e.title||e.institution}</span>
-                          <span style={{fontSize:11}}>{e.dates}</span>
-                        </div>
-                        <div style={{display:"flex",justifyContent:"space-between"}}>
-                          <span style={{fontSize:11,fontStyle:"italic"}}>{e.organization||e.company||e.degree}</span>
-                          {(e.gpa||e.location)&&<span style={{fontSize:11,fontStyle:"italic"}}>{e.gpa?"GPA: "+e.gpa:e.location}</span>}
-                        </div>
-                        {(e.bullets||e.details||[]).map((b,k)=><p key={k} style={{fontSize:11,paddingLeft:10,lineHeight:1.4}}>• {b}</p>)}
+                        <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:600,fontSize:11,color:"var(--text)"}}>{e.organization}</span><span style={{fontSize:11}}>{e.dates}</span></div>
+                        {e.title&&<p style={{fontSize:11,fontStyle:"italic"}}>{e.title}</p>}
+                        {(e.bullets||[]).map((b,k)=><p key={k} style={{fontSize:11,paddingLeft:10}}>• {b}</p>)}
                       </div>
                     ))}
                   </div>
