@@ -573,6 +573,10 @@ Return this exact JSON schema:
               <button onClick={()=>setShowAddExp(v=>!v)} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}>
                 <i className="ti ti-plus" style={{marginRight:4}}/>Add experience
               </button>
+              <label style={{fontSize:12,padding:"4px 10px",color:"var(--text2)",cursor:"pointer",border:"1px solid var(--border)",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:4}}>
+                <i className="ti ti-file-type-pdf" style={{fontSize:13,color:"#dc2626"}}/>Re-import PDF
+                <input type="file" accept=".pdf" onChange={importPdf} style={{display:"none"}} disabled={pdfLoading}/>
+              </label>
               <button onClick={()=>{setDraft(baseResume);setEditing(true);}} style={{fontSize:12,padding:"4px 10px",color:"var(--text2)"}}>
                 <i className="ti ti-pencil" style={{marginRight:4}}/>Edit
               </button>
