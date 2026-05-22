@@ -476,6 +476,7 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
   const [result,setResult]=useState(null);
   const [error,setError]=useState("");
   const [copied,setCopied]=useState(false);
+  const [pdfLoading,setPdfLoading]=useState(false);
   const [showAddExp,setShowAddExp]=useState(false);
   const [expCompany,setExpCompany]=useState("");
   const [expRole,setExpRole]=useState("");
