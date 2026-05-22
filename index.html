@@ -840,7 +840,7 @@ CRITICAL RULES:
                   <button onClick={copyResume} style={{fontSize:12,padding:"5px 10px",color:copied?"#166534":"var(--text2)",background:copied?"#DCFCE7":"transparent",border:"1px solid",borderColor:copied?"#166534":"var(--border)",borderRadius:"var(--radius)"}}>
                     <i className={`ti ${copied?"ti-check":"ti-copy"}`} style={{marginRight:4}}/>{copied?"Copied!":"Copy text"}
                   </button>
-                  <button onClick={()=>generateTailoredDocx(result.tailored_structured)} disabled={generating} style={{fontSize:12,padding:"5px 12px",color:"#fff",background:"#2563eb",border:"none",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer",opacity:generating?0.7:1}}>
+                  <button onClick={()=>generateTailoredDocx(result.tailored_structured,(jobs.find(j=>j.id===selectedJobId)||tailorJob)?.company||"Company")} disabled={generating} style={{fontSize:12,padding:"5px 12px",color:"#fff",background:"#2563eb",border:"none",borderRadius:"var(--radius)",display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer",opacity:generating?0.7:1}}>
                     <i className="ti ti-file-word" style={{fontSize:13}}/>{generating?"Generating...":"Download .docx"}
                   </button>
                 </div>
