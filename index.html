@@ -489,59 +489,72 @@ function ResumeScreen({apiKey,tailorJob,onClearTailorJob}){
 
   function saveResume(){localStorage.setItem("jsc_resume",draft);setBaseResume(draft);setEditing(false);}
 
-  async function importPdf(e){
+  async function importDocx(e){
     const file=e.target.files[0];
     if(!file)return;
-    setPdfLoading(true);
+    setDocxLoading(true);
     try{
       const arrayBuffer=await file.arrayBuffer();
-      // Lock original PDF on first import only
-      if(!hasPdf){
+      if(!hasDocx){
         const bytes=new Uint8Array(arrayBuffer.slice(0));
-        let b64="";
-        const chunk=8192;
+        let b64="";const chunk=8192;
         for(let i=0;i<bytes.length;i+=chunk){b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));}
-        localStorage.setItem("jsc_resume_pdf",btoa(b64));
-        setHasPdf(true);
+        localStorage.setItem("jsc_resume_docx",btoa(b64));
+        setHasDocx(true);
       }
-      const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-      let text="";
-      for(let i=1;i<=pdf.numPages;i++){
-        const page=await pdf.getPage(i);
-        const content=await page.getTextContent();
-        const items=content.items;
-        let pageText="";
-        let lastY=null;
-        for(const item of items){
-          if(lastY!==null&&Math.abs(item.transform[5]-lastY)>3)pageText+="\n";
-          pageText+=item.str+" ";
-          lastY=item.transform[5];
-        }
-        text+=pageText+"\n";
-      }
-      const cleaned=text.replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
-      setDraft(cleaned);setEditing(true);
-    }catch(err){alert("Could not read PDF: "+err.message);}
-    setPdfLoading(false);
-    e.target.value="";
+      const res=await mammoth.extractRawText({arrayBuffer});
+      setDraft(res.value.trim());setEditing(true);
+    }catch(err){alert("Could not read file: "+err.message);}
+    setDocxLoading(false);e.target.value="";
   }
 
-  function viewOriginalPdf(){
-    const b64=localStorage.getItem("jsc_resume_pdf");
+  function downloadOriginal(){
+    const b64=localStorage.getItem("jsc_resume_docx");
     if(!b64)return;
     try{
-      const bin=atob(b64);
-      const bytes=new Uint8Array(bin.length);
+      const bin=atob(b64);const bytes=new Uint8Array(bin.length);
       for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-      const blob=new Blob([bytes],{type:"application/pdf"});
-      window.open(URL.createObjectURL(blob),"_blank");
-    }catch(err){alert("Could not open PDF: "+err.message);}
+      const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Resume_Original.docx";a.click();
+    }catch(err){alert("Error: "+err.message);}
   }
 
-  function replacePdf(){
-    if(!confirm("Replace your locked original PDF? This cannot be undone."))return;
-    localStorage.removeItem("jsc_resume_pdf");
-    setHasPdf(false);
+  function replaceDocx(){
+    if(!confirm("Replace your locked original .docx? This cannot be undone."))return;
+    localStorage.removeItem("jsc_resume_docx");setHasDocx(false);
+  }
+
+  async function generateTailoredDocx(structured){
+    const {Document,Paragraph,TextRun,Tab,TabStopType,AlignmentType,BorderStyle,Packer,convertInchesToTwip,LineRuleType}=window.docx;
+    const F="Calibri",SZ=20,SZ_NAME=40,TAB=10060;
+    const ps=[];
+    ps.push(new Paragraph({children:[new TextRun({text:structured.name||"",bold:true,size:SZ_NAME,font:F})],alignment:AlignmentType.CENTER,spacing:{after:40}}));
+    ps.push(new Paragraph({children:[new TextRun({text:(structured.contact||"").replace(/\|/g,"•"),size:SZ,font:F})],alignment:AlignmentType.CENTER,spacing:{after:80}}));
+    for(const sec of structured.sections||[]){
+      ps.push(new Paragraph({children:[new TextRun({text:sec.title||"",bold:true,size:SZ,font:F})],border:{bottom:{color:"000000",space:1,size:6,style:BorderStyle.SINGLE}},spacing:{before:160,after:40,line:252,lineRule:LineRuleType.AUTO},tabStops:[{type:TabStopType.RIGHT,position:TAB}]}));
+      if(sec.type==="education"){
+        for(const e of sec.entries||[]){
+          ps.push(new Paragraph({children:[new TextRun({text:e.institution||"",bold:true,size:SZ,font:F}),new Tab(),new TextRun({text:e.dates||"",size:SZ,font:F})],tabStops:[{type:TabStopType.RIGHT,position:TAB}],spacing:{before:60,after:0,line:252,lineRule:LineRuleType.AUTO}}));
+          ps.push(new Paragraph({children:[new TextRun({text:e.degree||"",bold:true,italics:true,size:SZ,font:F}),...(e.gpa?[new Tab(),new TextRun({text:"GPA: "+e.gpa,size:SZ,font:F})]:[])],tabStops:[{type:TabStopType.RIGHT,position:TAB}],spacing:{after:0,line:240,lineRule:LineRuleType.AUTO}}));
+          for(const d of e.details||[])ps.push(new Paragraph({children:[new TextRun({text:d,size:SZ,font:F})],spacing:{after:0,line:240,lineRule:LineRuleType.AUTO}}));
+        }
+      }else if(sec.type==="skills"){
+        for(const e of sec.entries||[])ps.push(new Paragraph({children:[new TextRun({text:(e.label||"")+": ",bold:true,size:SZ,font:F}),new TextRun({text:e.content||"",size:SZ,font:F})],spacing:{after:0,line:240,lineRule:LineRuleType.AUTO}}));
+      }else{
+        for(const e of sec.entries||[]){
+          ps.push(new Paragraph({children:[new TextRun({text:e.organization||"",bold:true,size:SZ,font:F}),new Tab(),new TextRun({text:e.dates||"",size:SZ,font:F})],tabStops:[{type:TabStopType.RIGHT,position:TAB}],spacing:{before:60,after:0,line:252,lineRule:LineRuleType.AUTO}}));
+          if(e.title)ps.push(new Paragraph({children:[new TextRun({text:e.title,italics:true,size:SZ,font:F})],spacing:{after:0,line:240,lineRule:LineRuleType.AUTO}}));
+          for(const b of e.bullets||[])ps.push(new Paragraph({children:[new TextRun({text:b,size:SZ,font:F})],bullet:{level:0},spacing:{after:0,line:240,lineRule:LineRuleType.AUTO}}));
+        }
+      }
+    }
+    const doc=new Document({sections:[{properties:{page:{margin:{top:convertInchesToTwip(0.75),bottom:convertInchesToTwip(0.75),left:convertInchesToTwip(0.75),right:convertInchesToTwip(0.75)}}},children:ps}]});
+    setGenerating(true);
+    try{
+      const blob=await Packer.toBlob(doc);
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Resume_Tailored.docx";a.click();
+    }catch(err){alert("Error generating file: "+err.message);}
+    setGenerating(false);
   }
 
   function addExperience(){
