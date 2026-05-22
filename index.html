@@ -252,12 +252,13 @@ ${input}`}]
     onJobSaved(result.role+" at "+result.company);
   }
   function quickAdd(){
-    if(!qaRole.trim()||!qaCompany.trim()){setError("Role and company are required.");return;}
+    if(!qaUrl.trim()&&!qaRole.trim()){setError("Paste a link or enter a role name.");return;}
     const jobs=JSON.parse(localStorage.getItem("jsc_jobs")||"[]");
-    jobs.unshift({id:Date.now(),role:qaRole.trim(),company:qaCompany.trim(),location:qaLocation.trim()||"—",type:qaType,salary:null,summary:"",required_skills:[],nice_to_haves:[],fit_notes:"",match:null,track:qaTrack,status:"Saved",savedAt:new Date().toLocaleDateString(),appliedAt:null,notes:"",url:qaUrl.trim()});
+    jobs.unshift({id:Date.now(),role:qaRole.trim()||"Untitled role",company:qaCompany.trim()||"—",location:"—",type:"Full-time",salary:null,summary:"",required_skills:[],nice_to_haves:[],fit_notes:"",match:null,track:qaTrack,status:"Saved",savedAt:new Date().toLocaleDateString(),appliedAt:null,notes:"",url:qaUrl.trim()});
     localStorage.setItem("jsc_jobs",JSON.stringify(jobs));
-    setQaRole("");setQaCompany("");setQaLocation("");setQaUrl("");setError("");
-    onJobSaved(qaRole.trim()+" at "+qaCompany.trim());
+    const label=(qaRole.trim()||"Role")+(qaCompany.trim()?" at "+qaCompany.trim():"");
+    setQaUrl("");setQaRole("");setQaCompany("");setShowQuickAdd(false);setError("");
+    onJobSaved(label);
   }
 
   return (
