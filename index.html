@@ -682,12 +682,12 @@ RULES: One page max. Max 3 bullets per role. Weave in missing keywords only wher
 
   return (
     <div>
-      {hasPdf&&(
+      {hasDocx&&(
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:"1rem",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:"var(--radius)",padding:"10px 14px"}}>
-          <i className="ti ti-file-type-pdf" style={{color:"#dc2626",fontSize:16}}/>
-          <span style={{flex:1,fontSize:13,fontWeight:500,color:"var(--text)"}}>Original PDF locked</span>
-          <button onClick={viewOriginalPdf} style={{fontSize:12,padding:"4px 10px",color:"var(--accent)"}}>View original</button>
-          <button onClick={replacePdf} style={{fontSize:12,padding:"4px 10px",color:"var(--text3)"}}>Replace</button>
+          <i className="ti ti-file-word" style={{color:"#2563eb",fontSize:16}}/>
+          <span style={{flex:1,fontSize:13,fontWeight:500,color:"var(--text)"}}>Original .docx locked</span>
+          <button onClick={downloadOriginal} style={{fontSize:12,padding:"4px 10px",color:"var(--accent)"}}>Download original</button>
+          <button onClick={replaceDocx} style={{fontSize:12,padding:"4px 10px",color:"var(--text3)"}}>Replace</button>
         </div>
       )}
 
